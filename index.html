@@ -6,13 +6,20 @@
 <title>Commande groupée – La Brasserie Stéphanoise</title>
 <style>body{margin:0;background:#F7F2E8;color:#6E645B;font-family:"Arial Narrow",Arial,sans-serif;text-align:center;padding:30vh 16px 0}@media (prefers-color-scheme:dark){body{background:#181614;color:#A99E92}}</style>
 </head><body>
-<p id="m">Chargement…</p>
+<p id="m">Chargement de la commande…</p>
 <script>
 // La page complète est servie par le Google Sheet « Commandes CSE » (fichier App de son Apps Script).
-// Appel sans cookie Google : fonctionne quel que soit le nombre de comptes ouverts.
-fetch("https://script.google.com/macros/s/AKfycbzRSQ0lBMRcvBiTjXZc9tGEtW9TJKibLfzpJFHbwQPFPf2Yb-iZhp-pJGbdl6ILf9oR/exec?api=app", {credentials:"omit"})
-  .then(function(r){ if(!r.ok) throw 0; return r.text(); })
-  .then(function(h){ document.open(); document.write(h); document.close(); })
+// Appels sans cookie Google : fonctionne quel que soit le nombre de comptes ouverts.
+(function () {
+var API = "https://script.google.com/macros/s/AKfycbzRSQ0lBMRcvBiTjXZc9tGEtW9TJKibLfzpJFHbwQPFPf2Yb-iZhp-pJGbdl6ILf9oR/exec";
+var P = new URLSearchParams(location.search);
+var app = fetch(API + "?api=app", {credentials:"omit"}).then(function(r){ if(!r.ok) throw 0; return r.text(); });
+var data = (P.get("cse") && !P.has("cle") && !P.get("desinscription"))
+  ? fetch(API + "?api=page&cse=" + encodeURIComponent(P.get("cse")), {credentials:"omit"}).then(function(r){ return r.json(); }).catch(function(){ return null; })
+  : Promise.resolve(null);
+Promise.all([app, data])
+  .then(function(v){ window.__PRE = v[1]; document.open(); document.write(v[0]); document.close(); })
   .catch(function(){ document.getElementById("m").textContent = "La page n’a pas pu se charger. Vérifiez votre connexion internet puis rechargez la page."; });
+})();
 </script>
 </body></html>
