@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#17936F">
+<title>Commande groupée – La Brasserie Stéphanoise</title>
+<style>body{margin:0;background:#F7F2E8;color:#6E645B;font-family:"Arial Narrow",Arial,sans-serif;text-align:center;padding:30vh 16px 0}@media (prefers-color-scheme:dark){body{background:#181614;color:#A99E92}}</style>
+</head><body>
+<p id="m">Chargement…</p>
+<script>
+// La page complète est servie par le Google Sheet « Commandes CSE » (fichier App de son Apps Script).
+// Appel sans cookie Google : fonctionne quel que soit le nombre de comptes ouverts.
+fetch("https://script.google.com/macros/s/AKfycbzRSQ0lBMRcvBiTjXZc9tGEtW9TJKibLfzpJFHbwQPFPf2Yb-iZhp-pJGbdl6ILf9oR/exec?api=app", {credentials:"omit"})
+  .then(function(r){ if(!r.ok) throw 0; return r.text(); })
+  .then(function(h){ document.open(); document.write(h); document.close(); })
+  .catch(function(){ document.getElementById("m").textContent = "La page n’a pas pu se charger. Vérifiez votre connexion internet puis rechargez la page."; });
+</script>
+</body></html>
