@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#17936F">
+<title>Commande groupée – La Brasserie Stéphanoise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap">
+<style id="cssPage">
+/* Layout : colonne d'appli mobile (max 480px), en-tête d'étapes, barre d'action collée en bas. Étiquettes gravées posées sur une « plaque » crème dans les deux thèmes. */
+:root{
+  --bg:#F7F2E8; --surface:#FFFFFF; --ink:#231F20; --muted:#6E645B; --line:#E6DCCC;
+  --brand:#17936F; --brand-strong:#0F7A5B; --on-brand:#FFFFFF;
+  --plate:#FCFAF4; --plate-line:#EADFCB;
+  --warn:#B4470F; --warn-bg:#FCE7D8; --ok:#26733A; --ok-bg:#E2F1E2;
+  --gold:#8A6A1F; --gold-bg:#F6EDD5;
+  --shadow:0 1px 0 rgba(35,31,32,.06),0 6px 18px -10px rgba(35,31,32,.25);
+  --f:"Roboto Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#181614; --surface:#23201D; --ink:#F2ECE2; --muted:#A99E92; --line:#38322C;
+  --brand:#3DBB94; --brand-strong:#5BD0AA; --on-brand:#0E1F19;
+  --plate:#F4EFE4; --plate-line:#3A342D;
+  --warn:#F0935A; --warn-bg:#3A2316; --ok:#86CC93; --ok-bg:#1E3022;
+  --gold:#E2C27A; --gold-bg:#3A311D;
+  --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 20px -12px rgba(0,0,0,.7); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#181614; --surface:#23201D; --ink:#F2ECE2; --muted:#A99E92; --line:#38322C;
+  --brand:#3DBB94; --brand-strong:#5BD0AA; --on-brand:#0E1F19;
+  --plate:#F4EFE4; --plate-line:#3A342D;
+  --warn:#F0935A; --warn-bg:#3A2316; --ok:#86CC93; --ok-bg:#1E3022;
+  --gold:#E2C27A; --gold-bg:#3A311D;
+  --shadow:0 1px 0 rgba(0,0,0,.4),0 8px 20px -12px rgba(0,0,0,.7); color-scheme:dark}
+*{box-sizing:border-box}
+img{max-width:100%}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.4;padding-inline:16px;-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;padding-block:12px 150px;display:flex;flex-direction:column;gap:16px}
+.demo{font-size:12.5px;color:var(--gold);background:var(--gold-bg);border-radius:8px;padding:6px 10px;text-align:center}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap}
+.logo{background:var(--plate);border-radius:6px;padding:8px 12px;display:inline-flex}
+.logo img{height:30px;display:block}
+.steps{display:flex;gap:2px;font-size:11.5px;white-space:nowrap;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.steps span{padding:4px 8px;border-radius:999px}
+.steps span.on{background:var(--ink);color:var(--bg);font-weight:700}
+.steps span.done{color:var(--brand);font-weight:700}
+h1{font-size:30px;line-height:1.05;margin:0;font-weight:800;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:21px;margin:0;font-weight:700;text-wrap:balance}
+.lead{color:var(--muted);margin:0}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--brand);font-weight:700;margin:0}
+/* Accueil */
+.hero{display:flex;flex-direction:column;gap:12px}
+.cse{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;box-shadow:var(--shadow)}
+.cse b{font-size:18px}
+.cse .dl{grid-row:span 2;align-self:center;text-align:right;font-size:13px;color:var(--muted)}
+.cse .dl strong{display:block;font-size:20px;color:var(--ink)}
+.frieze{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.frieze img{height:74px;background:var(--plate);border-radius:6px;padding:4px}
+.how{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.how li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}
+.how .n{font-size:26px;font-weight:800;line-height:1}
+.how li:nth-child(1) .n{color:#1BAD8B}.how li:nth-child(2) .n{color:#E84F3B}.how li:nth-child(3) .n{color:#D99500}
+.how p{margin:0}.how small{color:var(--muted);display:block}
+.closed{background:var(--warn-bg);color:var(--warn);font-weight:700;border-radius:12px;padding:12px 14px;margin:0}
+.err-box{background:var(--warn-bg);color:var(--warn);font-weight:700;border-radius:12px;padding:12px 14px;margin:0}
+.legal{font-size:11.5px;color:var(--muted);text-align:center;margin:0}
+/* Formulaire */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-weight:700;font-size:14px}
+.field label em{font-style:normal;font-weight:400;color:var(--muted)}
+.field input,.field textarea{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px 12px;font-size:17px;width:100%}
+.field input:focus,.field textarea:focus{border-color:var(--brand);outline:none}
+.field.err input{border-color:var(--warn)}
+.field .msg{font-size:13px;color:var(--warn)}
+.form{display:flex;flex-direction:column;gap:14px}
+.rgpd{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.rgpd summary{cursor:pointer;font-weight:700;color:var(--ink)}
+.rgpd p{margin:8px 0 0}
+/* Onglets format */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:6px;display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:6px}
+.tab{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 4px;font-weight:700;font-size:15px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer}
+.tab small{font-weight:400;font-size:12px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected="true"] small{color:inherit;opacity:.75}
+.tab .badge{font-size:11px;background:var(--brand);color:var(--on-brand);border-radius:999px;padding:0 6px;margin-top:2px}
+.group{display:flex;align-items:baseline;justify-content:space-between;margin-top:6px}
+.group h3{margin:0;font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.group span{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;gap:8px}
+.beer{display:grid;grid-template-columns:62px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:8px 10px 8px 8px;transition:border-color .15s}
+.beer.has{border-color:var(--c)}
+.plate{background:var(--plate);border:1px solid var(--plate-line);border-radius:8px;height:78px;display:flex;align-items:center;justify-content:center;padding:3px;cursor:pointer}
+.plate img{max-height:100%;width:auto}
+.info{min-width:0;display:flex;flex-direction:column;gap:1px}
+.name{font-weight:800;font-size:17px;color:var(--c);letter-spacing:.01em;background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.meta{font-size:14px;color:var(--muted)}
+.price{font-weight:700;font-variant-numeric:tabular-nums}
+.medal{align-self:flex-start;font-size:11.5px;font-weight:700;color:var(--gold);background:var(--gold-bg);border-radius:5px;padding:1px 6px;margin-top:3px}
+.stepper{display:flex;flex-direction:column;align-items:center;gap:2px}
+.stepper .row{display:flex;align-items:center;gap:4px}
+.sbtn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);font-size:22px;font-weight:700;line-height:1;display:grid;place-items:center;cursor:pointer}
+.sbtn.plus{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.sbtn:disabled{opacity:.35;cursor:default}
+.qty{min-width:26px;text-align:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:1em}
+/* Cartons */
+.carton{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.carton.warn{border-color:var(--warn);background:var(--warn-bg)}
+.carton.ok{border-color:var(--ok);background:var(--ok-bg)}
+.carton .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.carton .t span:last-child{font-variant-numeric:tabular-nums}
+.carton p{margin:0;font-size:14px}
+.carton.warn p{color:var(--warn);font-weight:700}
+.carton.ok p{color:var(--ok);font-weight:700}
+.slots{display:flex;gap:4px;flex-wrap:wrap}
+.slot{width:16px;height:28px;border-radius:5px 5px 3px 3px;border:1.5px solid var(--muted);position:relative;opacity:.55}
+.slot::before{content:"";position:absolute;left:4px;right:4px;top:-6px;height:6px;border:1.5px solid var(--muted);border-bottom:0;border-radius:2px 2px 0 0}
+.slot.f{background:var(--brand);border-color:var(--brand);opacity:1}
+.slot.f::before{border-color:var(--brand);background:var(--brand)}
+.big .slot{width:22px;height:38px}
+/* Coffrets */
+.box{display:grid;grid-template-columns:84px 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:8px 10px 8px 8px}
+.box.has{border-color:var(--brand)}
+.box img{width:84px;height:96px;object-fit:cover;border-radius:9px}
+.old{display:block;font-size:13px;color:var(--muted);text-decoration:line-through}
+.save{font-size:12px;font-weight:700;color:var(--brand)}
+.compo{display:grid;gap:8px}
+.mybox{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.mybox.warn{border-color:var(--warn)}
+.mybox .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mybox .h small{color:var(--muted)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:none;border-radius:7px;padding:9px 6px;font-weight:700;font-size:15px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13.5px;border-radius:999px;padding:3px 10px 3px 8px;background:var(--bg);border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.mybox .st{font-size:14px;font-weight:700}
+.mybox .st.warn{color:var(--warn)}.mybox .st.ok{color:var(--ok)}
+.btn2{border:1.5px solid var(--ink);background:none;border-radius:10px;padding:10px 14px;font-weight:800;font-size:15px;cursor:pointer;align-self:flex-start}
+.sheet.full{max-height:94%;height:94%;border-radius:18px 18px 0 0;padding:0}
+.sheet.full .shead{position:sticky;top:0;background:var(--surface);padding:16px 18px 10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px;z-index:2}
+.sheet.full .sbody{padding:12px 18px;display:flex;flex-direction:column;gap:8px}
+.sheet.full .sfoot{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 18px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center}
+.sheet.full .sfoot .cta{flex:1}
+.incl{font-size:12px;color:var(--muted)}
+.choice{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.choice input{margin-top:3px;accent-color:var(--brand);width:18px;height:18px}
+.choice small{display:block;color:var(--muted)}
+.choice:has(input:checked){border-color:var(--brand)}
+/* Barre du bas */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 20px -14px rgba(0,0,0,.35)}
+.bar-in{max-width:480px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bar .sum{flex:1;min-width:0}
+.bar .sum b{white-space:nowrap;font-size:22px;font-variant-numeric:tabular-nums;display:block;line-height:1.1}
+.bar .sum small{color:var(--muted);font-size:13px}
+.bar .why{color:var(--warn);font-weight:700}
+.cta{border:0;border-radius:12px;background:var(--brand);color:var(--on-brand);font-weight:800;font-size:17px;padding:14px 18px;cursor:pointer;letter-spacing:.01em;white-space:nowrap}
+.cta:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
+.ghost{background:none;border:0;color:var(--muted);font-weight:700;padding:10px 4px;cursor:pointer;font-size:15px}
+/* Récap */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;display:flex;justify-content:space-between}
+.card h3 button{font:inherit;font-size:13px;letter-spacing:0;text-transform:none;color:var(--brand);background:none;border:0;cursor:pointer;font-weight:700}
+.line{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.line .l small{color:var(--muted)}
+.tot{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px solid var(--ink);padding-top:10px;font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.note{font-size:14px;color:var(--muted);margin:0}
+.who{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:15px}
+.who dt{color:var(--muted)}.who dd{margin:0}
+/* Confirmation */
+.done{display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+.stamp{border:3px solid var(--brand);color:var(--brand);border-radius:10px;padding:6px 12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;transform:rotate(-3deg)}
+/* Fiche bière */
+.sheet-bg{position:fixed;inset:0;background:rgba(20,16,14,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;max-height:88%;overflow:auto}
+.sheet .head{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center}
+.sheet .head .plate{height:140px;cursor:default}
+.sheet .dev{font-style:italic;color:var(--c);font-weight:500}
+.sheet p{margin:0}
+.sheet ul{margin:0;padding-left:18px;color:var(--gold);font-weight:700;font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+.qty.pop{animation:pop .18s ease-out}
+
+.wait{color:var(--muted);text-align:center;margin-top:30vh}
+.msgpage{display:flex;flex-direction:column;gap:16px;padding-top:20px}
+.msgpage .logo{align-self:flex-start}
+</style>
+<style id="cssSuivi" media="not all">
+/* Tableau de suivi pour le responsable CSE : synthèse d'abord, détail ensuite. */
+:root{--bg:#F7F2E8;--surface:#FFFFFF;--ink:#231F20;--muted:#6E645B;--line:#E6DCCC;--brand:#17936F;--plate:#FCFAF4;--warn:#B4470F;--warn-bg:#FCE7D8;
+  --f:"Roboto Condensed","Arial Narrow",Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#181614;--surface:#23201D;--ink:#F2ECE2;--muted:#A99E92;--line:#38322C;--brand:#3DBB94;--warn:#F0935A;--warn-bg:#3A2316;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.4;padding:16px}
+main{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.logo{background:var(--plate);border-radius:6px;padding:8px 12px;align-self:flex-start}
+.logo img{height:30px;display:block}
+h1{font-size:28px;margin:0;font-weight:800;text-wrap:balance}
+h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin:0}
+.meta{color:var(--muted);margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--muted);font-weight:700}
+td.n,th.n{text-align:right;white-space:nowrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.det{font-size:13.5px;color:var(--muted)}
+.warn{background:var(--warn-bg);color:var(--warn);font-weight:700;border-radius:10px;padding:10px 12px;margin:0}
+.closed{color:var(--warn);font-weight:700}
+.legal{font-size:12px;color:var(--muted);text-align:center;margin:0}
+.del{font:inherit;font-size:13px;color:var(--warn);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer;margin-top:6px;min-height:32px}
+.del:hover{border-color:var(--warn)}
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.dlg{background:var(--surface);border-radius:14px;padding:20px;max-width:400px;width:100%;display:flex;flex-direction:column;gap:12px}
+.dlg h3{margin:0;font-size:20px}
+.dlg p{margin:0;color:var(--muted)}
+.dlg .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+.dlg button{font:inherit;font-weight:700;border-radius:10px;padding:10px 16px;cursor:pointer;min-height:44px}
+.dlg .no{background:none;border:1px solid var(--line);color:var(--ink)}
+.dlg .yes{background:var(--warn);border:1px solid var(--warn);color:#fff}
+.dlg .yes:disabled{opacity:.6;cursor:wait}
+.toast{background:var(--brand);color:#fff;border-radius:10px;padding:10px 12px;margin:0;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="app" id="app"><p class="wait">Chargement…</p></div>
+<div class="bar" id="bar" hidden><div class="bar-in" id="barIn"></div></div>
+<div class="sheet-bg" id="sheetBg" hidden></div>
+
+<script>
+/* Page de commande groupée. Les données viennent du Google Sheet « Commandes CSE »
+   via son application Apps Script, appelée sans cookie Google (credentials: "omit"). */
+const API = "https://script.google.com/macros/s/AKfycbzRSQ0lBMRcvBiTjXZc9tGEtW9TJKibLfzpJFHbwQPFPf2Yb-iZhp-pJGbdl6ILf9oR/exec";
+const LOGO = "data:image/png;base64,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";
+const Q = new URLSearchParams(location.search);
+const escM = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function showMessage(titre, texte){
+  document.title = titre + " – La Brasserie Stéphanoise";
+  document.getElementById("bar").hidden = true;
+  document.getElementById("app").innerHTML = `<section class="msgpage"><span class="logo"><img src="${LOGO}" alt="La Brasserie Stéphanoise"></span><h1>${escM(titre)}</h1><p class="lead">${escM(texte)}</p></section>`;
+}
+// Google répond parfois lentement : si rien n'est revenu au bout de 7 s, on relance une requête
+// en parallèle (4 au maximum) et on garde la première réponse. Abandon au bout de 60 s.
+function api(params){
+  const u = API + "?" + new URLSearchParams(params);
+  return new Promise((ok, ko)=>{
+    let done=false, n=0, fails=0;
+    const end=(f,v)=>{ if(done) return; done=true; clearInterval(iv); clearTimeout(cap); f(v); };
+    const go=()=>{ if(done||n>=4) return; n++;
+      fetch(u + "&_=" + Date.now() + n, {credentials:"omit"})
+        .then(r=>{ if(!r.ok) throw new Error(); return r.json(); })
+        .then(j=>end(ok, j))
+        .catch(()=>{ fails++; if(fails>=n){ n>=4 ? end(ko, new Error()) : go(); } }); };
+    const iv=setInterval(go, 7000), cap=setTimeout(()=>end(ko, new Error()), 60000);
+    go();
+  });
+}
+const OFFLINE = () => showMessage("Connexion impossible", "La page n’a pas pu charger la commande. Vérifiez votre connexion internet puis rechargez la page.");
+
+function startOrder(DATA){
+  document.title = "Commande – " + DATA.cse.nom;
+const IMG = DATA.images;
+const CSE = DATA.cse;
+const CARTON = DATA.carton;
+const RG = DATA.rgpd;
+const BEERS = DATA.beers.map(b=>Object.assign(b,{c:(/^#2[0-3]1[ef]2[0-1]$/i.test(b.c)?"var(--ink)":b.c)}));
+const BOXES = DATA.boxes;
+const range = arr => { const mn=Math.min(...arr), mx=Math.max(...arr); return mn===mx?eur(mn):eur(mn).replace(" €","")+" – "+eur(mx); };
+const groupPrice = (g,f) => { const b=BEERS.find(x=>x.g===g); return b?price(b,f):0; };
+const S = {screen:"home", tab:"33", person:{nom:"",prenom:"",service:"",tel:"",email:"",news:false}, q:{"33":{},"75":{}}, boxes:[], compose:null, errors:{}};
+
+function eur(v){ return Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"; }
+const eur_old = v => v.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+const esc = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = s => document.querySelector(s);
+function price(b,f){ return f==="33"?b.p33:b.p75; }
+const count = f => Object.values(S.q[f]).reduce((a,b)=>a+b,0);
+const amount = f => BEERS.reduce((a,b)=>a+(S.q[f][b.id]||0)*price(b,f),0);
+const BT = id => BOXES.find(b=>b.id===id);
+const boxCount = () => S.boxes.length;
+const nOf = id => S.boxes.filter(x=>x.t===id).length;
+const boxAmount = () => S.boxes.reduce((a,x)=>a+BT(x.t).p,0);
+const boxSaving = () => S.boxes.reduce((a,x)=>a+BT(x.t).old-BT(x.t).p,0);
+const filled = x => Object.values(x.pick).reduce((a,b)=>a+b,0);
+const boxLabel = (x,i) => { const same=S.boxes.filter(y=>y.t===x.t); return BT(x.t).n + (same.length>1?` · n°${same.indexOf(x)+1}`:""); };
+const boxTodo = () => S.boxes.filter(x=>x.mode==="mesure" && filled(x)<BT(x.t).cap);
+const pickText = x => BEERS.filter(b=>x.pick[b.id]).map(b=>`${x.pick[b.id]} × ${b.n}`).join(", ");
+const total = () => amount("33")+amount("75")+boxAmount();
+const missing = f => { const n=count(f), k=CARTON[f], r=n%k; return r? k-r : 0; };
+const blockers = () => ["33","75"].filter(f=>missing(f)>0);
+const plural = (n,s,p) => n+" "+(n>1?(p||s+"s"):s);
+
+function stepsHtml(cur){
+  const order=["vous","bieres","recap"], lab={vous:"Vous",bieres:"Commande",recap:"Récap"};
+  const ci=order.indexOf(cur);
+  return `<nav class="steps" aria-label="Étapes">${order.map((k,i)=>`<span class="${i===ci?"on":i<ci?"done":""}">${i+1}. ${lab[k]}</span>`).join("")}</nav>`;
+}
+function topBar(cur){ return `<div class="top"><span class="logo"><img src="${IMG.logo}" alt="La Brasserie Stéphanoise"></span>${cur?stepsHtml(cur):""}</div>`; }
+const demo = "";
+
+function render(){
+  const app=$("#app");
+  if(S.screen==="home") app.innerHTML = homeHtml();
+  if(S.screen==="vous") app.innerHTML = vousHtml();
+  if(S.screen==="bieres") app.innerHTML = bieresHtml();
+  if(S.screen==="recap") app.innerHTML = recapHtml();
+  if(S.screen==="done") app.innerHTML = doneHtml();
+  renderBar();
+}
+
+function homeHtml(){
+  return `${demo}${topBar()}
+  <section class="hero">
+    <p class="eyebrow">Commande groupée</p>
+    <h1>Les bières bio de Saint-Étienne, livrées à votre travail</h1>
+    <div class="cse"><span class="lead">Commande organisée par</span>${CSE.limiteCourt?`<span class="dl">Date limite<strong>${CSE.limiteCourt}</strong></span>`:""}<b>${esc(CSE.nom)}</b></div>
+  </section>
+  ${CSE.ouvert?"":`<p class="closed">Les commandes sont closes${CSE.limite?" depuis le "+CSE.limite:""}. Rapprochez-vous de votre CSE pour toute question.</p>`}
+  <div class="frieze" aria-hidden="true">${BEERS.map(b=>`<img src="${IMG[b.i]}" alt="">`).join("")}</div>
+  <ol class="how">
+    <li><span class="n">1</span><p><b>Indiquez votre nom</b><small>Pour que le CSE retrouve votre commande à la livraison.</small></p></li>
+    <li><span class="n">2</span><p><b>Choisissez vos bières et coffrets</b><small>33 cl par cartons de 12, 75 cl par cartons de 6. Vous pouvez mélanger les bières dans un carton.</small></p></li>
+    <li><span class="n">3</span><p><b>Validez</b><small>Vous recevez un récapitulatif par e-mail. Le règlement se fait à la livraison.</small></p></li>
+  </ol>
+  <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
+}
+
+function field(id,label,ph,opt,type="text",ac=""){
+  const err=S.errors[id];
+  return `<div class="field${err?" err":""}"><label for="f-${id}">${label}${opt?` <em>(facultatif)</em>`:""}</label>
+  <input id="f-${id}" type="${type}" placeholder="${ph}" value="${esc(S.person[id])}" autocomplete="${ac}" data-p="${id}">
+  ${err?`<span class="msg">${err}</span>`:""}</div>`;
+}
+function vousHtml(){
+  return `${demo}${topBar("vous")}
+  <div><h2>Vos coordonnées</h2><p class="lead">Elles servent uniquement à préparer et remettre votre commande.</p></div>
+  <form class="form" id="form-vous" novalidate>
+    ${field("prenom","Prénom","Marie",false,"text","given-name")}
+    ${field("nom","Nom","Dupont",false,"text","family-name")}
+    ${field("service","Service ou fonction","Logistique, quai 3…",true,"text","organization-title")}
+    ${field("email","E-mail","marie.dupont@exemple.fr",false,"email","email")}
+    ${field("tel","Téléphone","06 12 34 56 78",true,"tel","tel")}
+    <label class="choice" for="f-news"><input type="checkbox" id="f-news" ${S.person.news?"checked":""}><span><b>Recevoir les actualités de la brasserie</b><small>Nouvelles bières et prochaines commandes CSE. Désinscription en un clic.</small></span></label>
+    <details class="rgpd"><summary>Vos données personnelles</summary>
+      <p>Vos coordonnées sont utilisées par La Brasserie Stéphanoise et par votre CSE pour préparer et remettre votre commande et vous envoyer sa confirmation par e-mail. Le détail de votre commande (service, téléphone) est effacé ${RG.mois} mois après la livraison.</p>
+      <p>Votre nom et votre e-mail sont conservés dans le fichier clients de La Brasserie Stéphanoise pendant ${RG.ans} ans après votre dernière commande. Vous ne recevez nos actualités que si vous cochez la case ci-dessus, et vous pouvez vous désinscrire à tout moment.</p>
+      <p>Vous pouvez à tout moment consulter, corriger ou faire supprimer vos données en écrivant à ${esc(RG.email)}. En cas de désaccord, vous pouvez saisir la CNIL (cnil.fr).</p>
+    </details>
+  </form>`;
+}
+
+function cartonHtml(f){
+  const n=count(f), k=CARTON[f], full=Math.floor(n/k), r=n%k, miss=missing(f);
+  const filled = n===0?0:(r===0?k:r);
+  let cls="", msg="";
+  if(n===0){ msg=`Aucune bouteille en ${f} cl pour l’instant.`; }
+  else if(miss){ cls="warn"; msg=`Ajoutez ${plural(miss,"bouteille")} pour compléter le carton.`; }
+  else { cls="ok"; msg=`${plural(full,"carton complet","cartons complets")}.`; }
+  const label = n===0?`Carton de ${k}`:`Carton ${full+(r?1:0)} : ${filled}/${k}`;
+  return `<div class="carton ${cls}" aria-live="polite"><div class="t"><span>${f} cl · ${label}</span><span>${plural(n,"bouteille")}</span></div>
+    <div class="slots ${f==="75"?"big":""}" aria-hidden="true">${Array.from({length:k},(_,i)=>`<i class="slot${i<filled?" f":""}"></i>`).join("")}</div>
+    <p>${msg}</p></div>`;
+}
+function beerRow(b,f){
+  const q=S.q[f][b.id]||0;
+  return `<article class="beer${q?" has":""}" style="--c:${b.c}">
+    <div class="plate" data-info="${b.id}" role="button" tabindex="0" aria-label="Voir la fiche ${esc(b.n)}"><img src="${IMG[b.i]}" alt=""></div>
+    <div class="info"><button class="name" data-info="${b.id}">${esc(b.n)}</button>
+      <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}</span>
+      ${b.chip?`<span class="medal">${b.chip}</span>`:""}</div>
+    <div class="stepper"><div class="row">
+      <button class="sbtn" data-dec="${b.id}" aria-label="Retirer une ${esc(b.n)}" ${q?"":"disabled"}>−</button>
+      <span class="qty" id="q-${f}-${b.id}" aria-live="polite">${q}</span>
+      <button class="sbtn plus" data-inc="${b.id}" aria-label="Ajouter une ${esc(b.n)}">+</button></div>
+      <span class="sub">${q?eur(q*price(b,f)):""}</span></div>
+  </article>`;
+}
+function bieresHtml(){
+  const f=S.tab;
+  const tabs=[["33","33 cl",range(BEERS.map(b=>b.p33))],["75","75 cl",range(BEERS.map(b=>b.p75))]].concat(BOXES.length?[["box","Coffrets","dès "+eur(Math.min(...BOXES.map(b=>b.p)))]]:[]);
+  const tabHtml=`<div class="tabs" role="tablist">${tabs.map(([k,l,s])=>{
+    const n=k==="box"?boxCount():count(k);
+    return `<button class="tab" role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${l}<small>${s}</small>${n?`<span class="badge">${n}</span>`:""}</button>`;}).join("")}</div>`;
+  let body="";
+  if(f==="box"){
+    body = `<p class="lead">Des coffrets prêts à offrir, à prix CSE. Pas de contrainte de carton.</p>
+    <div class="list">${BOXES.map(b=>{const q=nOf(b.id);return `<article class="box${q?" has":""}">
+      <img src="${IMG[b.img]}" alt="${esc(b.n)}">
+      <div class="info"><b>${b.n}</b><span class="price">${eur(b.p)} <span class="old">${eur(b.old)}</span></span><span class="save">${eur(b.old-b.p)} d’économie</span></div>
+      <div class="stepper"><div class="row"><button class="sbtn" data-bdec="${b.id}" aria-label="Retirer un ${b.n}" ${q?"":"disabled"}>−</button><span class="qty" id="q-box-${b.id}">${q}</span><button class="sbtn plus" data-binc="${b.id}" aria-label="Ajouter un ${b.n}">+</button></div><span class="sub">${q?eur(q*b.p):""}</span></div>
+    </article>`;}).join("")}</div>
+    ${boxCount()?`<div class="group"><h3>Vos coffrets</h3><span>${plural(boxCount(),"coffret")}</span></div>
+    <p class="lead" style="margin-top:-8px">Pour chaque coffret, laissez-nous composer un assortiment ou choisissez vous-même les bières.</p>
+    <div class="list">${S.boxes.map((x,i)=>myBoxHtml(x,i)).join("")}</div>`:""}`;
+  } else {
+    const grp = g => BEERS.filter(b=>b.g===g);
+    body = cartonHtml(f) + ["classique","speciale"].map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${eur(groupPrice(g,f))} la bouteille</span></div>
+      <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("");
+  }
+  return `${demo}${topBar("bieres")}<div><h2>Votre commande</h2><p class="lead">Touchez une étiquette pour découvrir la bière.</p></div>${tabHtml}${body}`;
+}
+
+function myBoxHtml(x,i){
+  const b=BT(x.t), n=filled(x), todo=x.mode==="mesure"&&n<b.cap;
+  let inner="";
+  if(x.mode==="mesure"){
+    inner = `${n?`<div class="chips">${BEERS.filter(e=>x.pick[e.id]).map(e=>`<span class="chip" style="--c:${e.c}"><i></i>${x.pick[e.id]} × ${esc(e.n)}</span>`).join("")}</div>`:""}
+      <div class="slots ${b.f==="75"?"big":""}" aria-hidden="true">${Array.from({length:b.cap},(_,k)=>`<i class="slot${k<n?" f":""}"></i>`).join("")}</div>
+      <span class="st ${todo?"warn":"ok"}">${todo?`${n}/${b.cap} bouteilles · encore ${plural(b.cap-n,"bière")} à choisir`:"Coffret complet"}</span>
+      <button class="btn2" data-compose="${i}">${n?"Modifier la composition":"Composer mon coffret"}</button>`;
+  } else inner = `<span class="incl">La brasserie compose un coffret varié de ${b.cap} bières ${b.f} cl.</span>`;
+  return `<article class="mybox${todo?" warn":""}"><div class="h"><b>${esc(boxLabel(x,i))}</b><small>${b.cap} × ${b.f} cl</small></div>
+    <div class="seg" role="group" aria-label="Composition"><button data-mode="${i}:assort" aria-pressed="${x.mode==="assort"}">Assortiment</button><button data-mode="${i}:mesure" aria-pressed="${x.mode==="mesure"}">Sur mesure</button></div>
+    ${inner}</article>`;
+}
+function composeHtml(){
+  const x=S.boxes[S.compose], b=BT(x.t), n=filled(x), full=n>=b.cap;
+  const rows = ["classique","speciale"].map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>incluses</span></div>`+
+    BEERS.filter(e=>e.g===g).map(e=>{const q=x.pick[e.id]||0;return `<article class="beer${q?" has":""}" style="--c:${e.c}">
+      <div class="plate" data-info="${e.id}" role="button" tabindex="0" aria-label="Voir la fiche ${esc(e.n)}"><img src="${IMG[e.i]}" alt=""></div>
+      <div class="info"><span class="name">${esc(e.n)}</span><span class="meta">${esc(e.s)} · ${e.d}</span></div>
+      <div class="stepper"><div class="row"><button class="sbtn" data-cdec="${e.id}" aria-label="Retirer une ${esc(e.n)}" ${q?"":"disabled"}>−</button><span class="qty" id="cq-${e.id}">${q}</span><button class="sbtn plus" data-cinc="${e.id}" aria-label="Ajouter une ${esc(e.n)}" ${full?"disabled":""}>+</button></div></div>
+    </article>`;}).join("")).join("");
+  return `<div class="sheet full" role="dialog" aria-modal="true" aria-label="Composer ${esc(boxLabel(x))}">
+    <div class="shead"><h2>Composer : ${esc(boxLabel(x))}</h2>
+      <div class="slots ${b.f==="75"?"big":""}" aria-hidden="true">${Array.from({length:b.cap},(_,k)=>`<i class="slot${k<n?" f":""}"></i>`).join("")}</div>
+      <span class="st" style="font-weight:700;color:${full?"var(--ok)":"var(--warn)"}">${full?"Coffret complet":`${n}/${b.cap} · encore ${plural(b.cap-n,"bière")} à choisir`}</span></div>
+    <div class="sbody">${rows}</div>
+    <div class="sfoot"><button class="ghost" data-cclose>Plus tard</button><button class="cta" data-cclose ${full?"":"disabled"}>Valider le coffret</button></div></div>`;
+}
+function openCompose(i){ S.compose=i; const bg=$("#sheetBg"); bg.innerHTML=composeHtml(); bg.hidden=false; }
+function refreshCompose(id){ const bg=$("#sheetBg"), sc=bg.querySelector(".sheet").scrollTop; bg.innerHTML=composeHtml(); bg.querySelector(".sheet").scrollTop=sc; if(id) bump("cq-"+id); }
+function closeCompose(){ S.compose=null; closeSheet(); render(); }
+function recapLines(f){
+  return BEERS.filter(b=>S.q[f][b.id]).map(b=>{const q=S.q[f][b.id];return `<div class="line" style="--c:${b.c}"><span class="dot"></span><span class="l">${q} × ${esc(b.n)} <small>${f} cl</small></span><span>${eur(q*price(b,f))}</span></div>`;}).join("");
+}
+function recapHtml(){
+  const p=S.person, n33=count("33"), n75=count("75"), nb=boxCount();
+  const sec=(t,html,tab)=>`<section class="card"><h3>${t}<button data-goto="${tab}">Modifier</button></h3>${html}</section>`;
+  return `${demo}${topBar("recap")}<h2>Vérifiez votre commande</h2>
+  <section class="card"><h3>Vous<button data-goto="vous">Modifier</button></h3>
+    <dl class="who"><dt>Nom</dt><dd>${esc(p.prenom)} ${esc(p.nom)}</dd><dt>E-mail</dt><dd style="overflow-wrap:anywhere">${esc(p.email)}</dd>${p.service?`<dt>Service</dt><dd>${esc(p.service)}</dd>`:""}${p.tel?`<dt>Téléphone</dt><dd>${esc(p.tel)}</dd>`:""}<dt>CSE</dt><dd>${esc(CSE.nom)}</dd></dl></section>
+  ${n33?sec(`33 cl · ${plural(n33/12,"carton")}`,recapLines("33"),"33"):""}
+  ${n75?sec(`75 cl · ${plural(n75/6,"carton")}`,recapLines("75"),"75"):""}
+  ${nb?sec(`Coffrets · ${nb}`,S.boxes.map((x,i)=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${esc(boxLabel(x,i))}<br><small>${x.mode==="assort"?"Assortiment de la brasserie":"Sur mesure : "+esc(pickText(x))}</small></span><span>${eur(BT(x.t).p)}</span></div>`).join(""),"box"):""}
+  <div class="tot"><span>Total</span><span>${eur(total())}</span></div>
+  ${nb?`<p class="note">Dont ${eur(boxSaving())} d’économie sur les coffrets.</p>`:""}
+  <p class="note">Règlement à la livraison, auprès du CSE. ${CSE.retrait?"Retrait ou livraison : "+esc(CSE.retrait)+(CSE.lieu?", "+esc(CSE.lieu):"")+".":"Retrait ou livraison : date communiquée par votre CSE."}</p>
+  ${sendError?`<p class="err-box" role="alert">${esc(sendError)}</p>`:""}
+  <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
+}
+function doneHtml(){
+  return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${result?result.numero:""} enregistrée</span>
+  <h1>Merci ${esc(S.person.prenom)} !</h1>
+  <p class="lead">Votre commande de ${eur(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. Vous la réglerez au moment de la livraison, auprès de votre CSE.</p>
+  <p class="note">Un oubli ou une erreur ? Répondez simplement à l’e-mail de confirmation.</p>
+  <button class="cta" data-restart>Passer une autre commande</button></section>`;
+}
+
+function renderBar(){
+  const bar=$("#bar"), inn=$("#barIn");
+  if(S.screen==="home"){ if(!CSE.ouvert){ bar.hidden=true; return; } bar.hidden=false; inn.innerHTML=`<button class="cta" style="flex:1" data-go="vous">Commencer ma commande</button>`; return; }
+  if(S.screen==="vous"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="home">Retour</button><div class="sum"></div><button class="cta" data-next-vous>Choisir mes bières</button>`; return; }
+  if(S.screen==="bieres"){
+    const bl=blockers(), todo=boxTodo(), empty=total()===0;
+    const why = empty?"Ajoutez au moins une bière ou un coffret":bl.length?bl.map(f=>`Encore ${plural(missing(f),"bouteille")} en ${f} cl`).join(" · "):todo.length?`${plural(todo.length,"coffret")} sur mesure à compléter`:`${plural(count("33")+count("75"),"bouteille")}${boxCount()?" · "+plural(boxCount(),"coffret"):""}`;
+    bar.hidden=false;
+    inn.innerHTML=`<div class="sum"><b>${eur(total())}</b><small class="${empty||bl.length||todo.length?"why":""}">${why}</small></div><button class="cta" data-go="recap" ${empty||bl.length||todo.length?"disabled":""}>Récapitulatif</button>`;
+    return;
+  }
+  if(S.screen==="recap"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="bieres" ${sending?"disabled":""}>Retour</button><div class="sum"><b>${eur(total())}</b></div><button class="cta" data-submit ${sending?"disabled":""}>${sending?"Envoi…":"Valider ma commande"}</button>`; return; }
+  bar.hidden=true;
+}
+
+let sending=false, result=null, sendError="";
+function submit(){
+  if(sending) return;
+  sending=true; sendError=""; renderBar();
+  const payload={cse:CSE.code, person:S.person, q:S.q, boxes:S.boxes};
+  const fail=msg=>{ sending=false; sendError=msg||"La commande n’a pas pu être envoyée. Vérifiez votre connexion et réessayez."; renderBar(); render(); };
+  fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
+    .then(r=>r.json())
+    .then(r=>{ if(r&&r.ok){ sending=false; result=r; go("done"); } else fail(r&&r.error); })
+    .catch(()=>fail());
+}
+function go(screen){ S.screen=screen; render(); window.scrollTo({top:0}); }
+function bump(id){ const el=document.getElementById(id); if(el){el.classList.remove("pop");void el.offsetWidth;el.classList.add("pop");} }
+
+function openSheet(id){
+  const b=BEERS.find(x=>x.id===id), bg=$("#sheetBg");
+  bg.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(b.n)}" style="--c:${b.c}">
+    <div class="head"><div class="plate"><img src="${IMG[b.i]}" alt="Étiquette ${esc(b.n)}"></div>
+    <div><h2 style="color:var(--c)">${esc(b.n)}</h2><p class="meta">${esc(b.s)} · ${b.d}</p><p class="dev">${b.dev}</p>
+    <p class="meta">33 cl ${eur(price(b,"33"))} · 75 cl ${eur(price(b,"75"))}</p></div></div>
+    <p>${b.desc}</p>${b.med.length?`<ul>${b.med.map(m=>`<li>${m}</li>`).join("")}</ul>`:""}
+    <button class="cta" data-close>Fermer</button></div>`;
+  bg.hidden=false; bg.querySelector("[data-close]").focus();
+}
+function closeSheet(){ const bg=$("#sheetBg"); bg.hidden=true; bg.innerHTML=""; }
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,[data-info],[data-go]");
+  if(e.target.id==="sheetBg"){ if(S.compose!==null) closeCompose(); else closeSheet(); return; }
+  if(!t) return;
+  const d=t.dataset;
+  if(d.close!==undefined){ if(S.compose!==null) refreshCompose(); else closeSheet(); return; }
+  if(d.info){ openSheet(d.info); return; }
+  if(d.go){ go(d.go); return; }
+  if(d.goto){ if(d.goto==="vous") go("vous"); else { S.tab=d.goto; go("bieres"); } return; }
+  if(d.tab){ S.tab=d.tab; render(); return; }
+  if(d.inc||d.dec){ const f=S.tab, id=d.inc||d.dec; const v=(S.q[f][id]||0)+(d.inc?1:-1); S.q[f][id]=Math.max(0,Math.min(240,v)); if(!S.q[f][id]) delete S.q[f][id]; render(); bump(`q-${f}-${id}`); return; }
+  if(d.binc){ if(boxCount()<50) S.boxes.push({t:d.binc,mode:"assort",pick:{}}); render(); bump(`q-box-${d.binc}`); return; }
+  if(d.bdec){ for(let k=S.boxes.length-1;k>=0;k--){ if(S.boxes[k].t===d.bdec){ S.boxes.splice(k,1); break; } } render(); bump(`q-box-${d.bdec}`); return; }
+  if(d.mode){ const [i,m]=d.mode.split(":"); const x=S.boxes[+i]; x.mode=m; render(); if(m==="mesure"&&!filled(x)) openCompose(+i); return; }
+  if(d.compose){ openCompose(+d.compose); return; }
+  if(d.cinc||d.cdec){ const x=S.boxes[S.compose], id=d.cinc||d.cdec, cap=BT(x.t).cap; if(d.cinc&&filled(x)<cap) x.pick[id]=(x.pick[id]||0)+1; if(d.cdec&&x.pick[id]){ x.pick[id]--; if(!x.pick[id]) delete x.pick[id]; } refreshCompose(id); return; }
+  if(d.cclose!==undefined){ closeCompose(); return; }
+  if(d.nextVous!==undefined){
+    S.errors={};
+    if(!S.person.prenom.trim()) S.errors.prenom="Indiquez votre prénom.";
+    if(!S.person.nom.trim()) S.errors.nom="Indiquez votre nom.";
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(S.person.email.trim())) S.errors.email=S.person.email.trim()?"Cette adresse e-mail semble incomplète.":"Indiquez votre e-mail pour recevoir la confirmation.";
+    if(Object.keys(S.errors).length){ render(); const f=document.getElementById("f-"+Object.keys(S.errors)[0]); f&&f.focus(); return; }
+    go("bieres"); return;
+  }
+  if(d.submit!==undefined){ submit(); return; }
+  if(d.restart!==undefined){ result=null; S.q={"33":{},"75":{}}; S.boxes=[]; S.compose=null; S.person={nom:"",prenom:"",service:"",tel:"",email:"",news:false}; S.tab="33"; go("home"); return; }
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ if(S.compose!==null) closeCompose(); else closeSheet(); }
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".plate[data-info]")){ e.preventDefault(); openSheet(e.target.dataset.info); }
+});
+document.addEventListener("input",e=>{
+  if(e.target.dataset.p){ S.person[e.target.dataset.p]=e.target.value; if(S.errors[e.target.dataset.p]){ delete S.errors[e.target.dataset.p]; e.target.closest(".field").classList.remove("err"); const m=e.target.closest(".field").querySelector(".msg"); m&&m.remove(); } }
+});
+document.addEventListener("change",e=>{ if(e.target.id==="f-news") S.person.news=e.target.checked; });
+document.addEventListener("submit",e=>e.preventDefault());
+
+render();
+}
+
+function startSuivi(D, info){
+  document.getElementById("cssPage").media = "not all";
+  document.getElementById("cssSuivi").media = "all";
+  document.title = "Suivi – " + D.cse.nom;
+const eur = v => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+const esc = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const t33 = D.beers.reduce((a,b)=>a+b.q33,0), t75 = D.beers.reduce((a,b)=>a+b.q75,0), tb = D.boxes.reduce((a,b)=>a+b.q,0);
+const total = D.orders.reduce((a,o)=>a+o.montant,0);
+const color = c => /^#2[0-3]1[ef]2[0-1]$/i.test(c) ? "var(--ink)" : c;
+document.getElementById("app").className="";
+document.getElementById("app").innerHTML = `<main>
+  ${D.logo?`<span class="logo"><img src="${D.logo}" alt="La Brasserie Stéphanoise"></span>`:""}
+  <div><h1>${esc(D.cse.nom)}</h1>
+  <p class="meta">${D.cse.ouvert?`Commandes ouvertes${D.cse.limite?" jusqu’au "+D.cse.limite:""}`:`<span class="closed">Commandes closes</span>`}
+  ${D.cse.retrait?" · Retrait / livraison : "+esc(D.cse.retrait)+(D.cse.lieu?", "+esc(D.cse.lieu):""):""}</p>
+  <p class="meta">Mis à jour le ${D.maj}. Rechargez la page pour actualiser.</p></div>
+  <div class="kpis">
+    <div class="kpi"><b>${D.orders.length}</b><span>commande${D.orders.length>1?"s":""}</span></div>
+    <div class="kpi"><b>${eur(total)}</b><span>montant total</span></div>
+    <div class="kpi"><b>${t33}</b><span>bouteilles 33 cl · ${(t33/12).toLocaleString("fr-FR")} carton${t33/12>1?"s":""}</span></div>
+    <div class="kpi"><b>${t75}</b><span>bouteilles 75 cl · ${(t75/6).toLocaleString("fr-FR")} carton${t75/6>1?"s":""}</span></div>
+    ${D.boxes.length?`<div class="kpi"><b>${tb}</b><span>coffret${tb>1?"s":""} cadeau${tb>1?"x":""}</span></div>`:""}
+  </div>
+  <section class="card"><h2>Par bière</h2><div class="scroll"><table>
+    <thead><tr><th>Bière</th><th class="n">33 cl</th><th class="n">75 cl</th></tr></thead>
+    <tbody>${D.beers.map(b=>`<tr><td><span class="dot" style="background:${color(b.c)}"></span>${esc(b.n)}</td><td class="n">${b.q33||"–"}</td><td class="n">${b.q75||"–"}</td></tr>`).join("")}
+    ${D.boxes.map(b=>`<tr><td>${esc(b.n)}</td><td class="n" colspan="2">${b.q||"–"}</td></tr>`).join("")}</tbody></table></div></section>
+  ${info?`<p class="toast" role="status">${esc(info)}</p>`:""}
+  <section class="card"><h2>Commandes de vos collègues</h2>
+  ${D.cse.ouvert&&D.orders.length?`<p class="meta">Une commande en double ou passée par erreur ? Vous pouvez la supprimer jusqu’à la date limite.</p>`:""}
+  ${D.orders.length?`<div class="scroll"><table><thead><tr><th>Nom</th><th>Détail</th><th class="n">Montant</th></tr></thead><tbody>
+    ${D.orders.map(o=>`<tr><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><br><span class="det">${esc(o.service)}${o.service&&o.date?" · ":""}${esc(o.date)}</span></td><td class="det">${esc(o.detail)}</td><td class="n">${eur(o.montant)}${D.cse.ouvert?`<br><button type="button" class="del" data-del="${esc(o.n)}">Supprimer</button>`:""}</td></tr>`).join("")}
+  </tbody></table></div>`:`<p class="meta">Aucune commande pour l’instant. Les commandes apparaîtront ici dès qu’un collègue aura validé la sienne.</p>`}
+  </section>
+  <p class="legal">Page réservée au responsable de la commande. Merci de ne pas la diffuser.<br>La Brasserie Stéphanoise · L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p></main>`;
+document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+  const o = D.orders.find(x=>String(x.n)===b.dataset.del);
+  const bg = document.createElement("div"); bg.className="dlg-bg";
+  bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+    <h3 id="dlgT">Supprimer la commande n°${esc(o.n)} ?</h3>
+    <p><b>${esc(o.prenom)} ${esc(o.nom)}</b> · ${eur(o.montant)}<br><span class="det">${esc(o.detail)}</span></p>
+    <p>Cette commande ne sera plus comptée ni préparée. La brasserie en sera prévenue.</p>
+    <p class="err" hidden style="color:var(--warn);font-weight:700"></p>
+    <div class="row"><button type="button" class="no">Annuler</button><button type="button" class="yes">Oui, supprimer</button></div></div>`;
+  document.body.appendChild(bg);
+  const close=()=>bg.remove(), yes=bg.querySelector(".yes"), err=bg.querySelector(".err");
+  bg.querySelector(".no").onclick=close; bg.onclick=e=>{ if(e.target===bg && !yes.disabled) close(); };
+  bg.querySelector(".no").focus();
+  yes.onclick=()=>{
+    yes.disabled=true; yes.textContent="Suppression…"; err.hidden=true;
+    fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"supprimer",cse:Q.get("cse"),cle:Q.get("cle"),n:o.n})})
+      .then(r=>r.json())
+      .then(r=>{ if(r&&r.ok){ close(); startSuivi(r.data, "Commande n°"+o.n+" de "+o.prenom+" "+o.nom+" supprimée."); scrollTo(0,0); }
+                 else { err.textContent=(r&&r.error)||"La suppression n’a pas pu se faire."; err.hidden=false; yes.disabled=false; yes.textContent="Oui, supprimer"; } })
+      .catch(()=>{ err.textContent="Connexion impossible. Vérifiez votre connexion puis réessayez."; err.hidden=false; yes.disabled=false; yes.textContent="Oui, supprimer"; });
+  };
+});
+}
+
+if (Q.get("desinscription")) {
+  api({api:"desinscription", t:Q.get("desinscription")}).then(r=>showMessage("Désinscription", r.message)).catch(OFFLINE);
+} else if (!Q.get("cse")) {
+  showMessage("Lien incomplet", "Ce lien de commande est incomplet. Utilisez le lien envoyé par votre CSE.");
+} else if (Q.has("cle")) {
+  api({api:"suivi", cse:Q.get("cse"), cle:Q.get("cle")}).then(r=> r.ok ? startSuivi(r.data) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
+} else {
+  (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"page", cse:Q.get("cse")})).then(r=> r.ok ? startOrder(r.data) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
+}
+</script>
+</body></html>
