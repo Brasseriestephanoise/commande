@@ -4,22 +4,36 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#17936F">
 <title>Commande groupée – La Brasserie Stéphanoise</title>
-<style>body{margin:0;background:#F7F2E8;color:#6E645B;font-family:"Arial Narrow",Arial,sans-serif;text-align:center;padding:30vh 16px 0}@media (prefers-color-scheme:dark){body{background:#181614;color:#A99E92}}</style>
+<style>
+body{margin:0;background:#F7F2E8;color:#231F20;font-family:"Arial Narrow",Arial,sans-serif;text-align:center;padding:24vh 24px 0}
+.logo{display:inline-block;background:#FCFAF4;border-radius:8px;padding:10px 16px}
+.logo img{height:40px;display:block}
+.spin{width:34px;height:34px;margin:28px auto 18px;border:4px solid #E6DCCC;border-top-color:#17936F;border-radius:50%;animation:t 1s linear infinite}
+@keyframes t{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+h1{font-size:20px;margin:0 0 6px}
+p{color:#6E645B;margin:0;font-size:16px;line-height:1.4}
+@media (prefers-color-scheme:dark){body{background:#181614;color:#F2ECE2}p{color:#A99E92}.spin{border-color:#38322C;border-top-color:#3DBB94}}
+</style>
 </head><body>
-<p id="m">Chargement de la commande…</p>
+<span class="logo"><img src="data:image/png;base64,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" alt="La Brasserie Stéphanoise"></span>
+<div class="spin" id="s" aria-hidden="true"></div>
+<h1 id="h">Chargement de votre commande…</h1>
+<p id="m">Cela peut prendre quelques secondes, merci de patienter.</p>
 <script>
 // La page complète est servie par le Google Sheet « Commandes CSE » (fichier App de son Apps Script).
 // Appels sans cookie Google : fonctionne quel que soit le nombre de comptes ouverts.
 (function () {
 var API = "https://script.google.com/macros/s/AKfycbzRSQ0lBMRcvBiTjXZc9tGEtW9TJKibLfzpJFHbwQPFPf2Yb-iZhp-pJGbdl6ILf9oR/exec";
 var P = new URLSearchParams(location.search);
+var lent = setTimeout(function(){ document.getElementById("m").textContent = "Encore quelques secondes : la première ouverture est un peu plus longue."; }, 8000);
 var app = fetch(API + "?api=app", {credentials:"omit"}).then(function(r){ if(!r.ok) throw 0; return r.text(); });
 var data = (P.get("cse") && !P.has("cle") && !P.get("desinscription"))
   ? fetch(API + "?api=page&cse=" + encodeURIComponent(P.get("cse")), {credentials:"omit"}).then(function(r){ return r.json(); }).catch(function(){ return null; })
   : Promise.resolve(null);
 Promise.all([app, data])
   .then(function(v){ window.__PRE = v[1]; document.open(); document.write(v[0]); document.close(); })
-  .catch(function(){ document.getElementById("m").textContent = "La page n’a pas pu se charger. Vérifiez votre connexion internet puis rechargez la page."; });
+  .catch(function(){ clearTimeout(lent); document.getElementById("s").style.display = "none"; document.getElementById("h").textContent = "La page n’a pas pu se charger"; document.getElementById("m").textContent = "Vérifiez votre connexion internet puis rechargez la page."; });
 })();
 </script>
 </body></html>
