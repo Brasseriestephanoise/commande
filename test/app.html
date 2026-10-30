@@ -95,6 +95,22 @@ h2{font-size:21px;margin:0;font-weight:700;text-wrap:balance}
 .beer.has{border-color:var(--c)}
 .plate{background:var(--plate);border:1px solid var(--plate-line);border-radius:8px;height:78px;display:flex;align-items:center;justify-content:center;padding:3px;cursor:pointer}
 .plate img{max-height:100%;width:auto}
+.catlink{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.catlink b{display:block;font-size:16px}.catlink small{color:var(--muted);font-size:13.5px}.catlink .arr{font-size:22px;font-weight:800;color:var(--muted)}
+.hint{font-size:13.5px;color:var(--muted);margin:0}.hint button{font:inherit;color:var(--ink);font-weight:700;background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
+.cat{display:grid;gap:12px}
+.ccard{display:grid;grid-template-columns:96px 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:14px;padding:12px}
+.ccard .pic{background:var(--plate);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:4px;min-height:120px;align-self:start}
+.ccard .pic img{max-width:100%;max-height:150px;border-radius:6px}
+.ccard .pic .noimg{width:60px;height:80px;font-size:20px}
+.ccard h3{margin:0;font-size:18px;color:var(--c);line-height:1.2}
+.ccard .meta{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.ccard .dev{margin:6px 0 0;font-style:italic;font-weight:700;font-size:14.5px}
+.ccard p.d{margin:6px 0 0;font-size:14.5px;line-height:1.5}
+.ccard ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--gold)}
+.ccard .px{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ccard .px span{font-size:13px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
+@media (max-width:380px){.ccard{grid-template-columns:72px 1fr}}
 .plate .noimg{display:flex;align-items:center;justify-content:center;width:44px;height:100%;border-radius:5px;background:var(--c);color:#fff;font-weight:800;font-size:15px}
 .info{min-width:0;display:flex;flex-direction:column;gap:1px}
 .name{font-weight:800;font-size:17px;color:var(--c);letter-spacing:.01em;background:none;border:0;padding:0;text-align:left;cursor:pointer}
@@ -344,6 +360,7 @@ function render(){
   if(S.screen==="bieres") app.innerHTML = bieresHtml();
   if(S.screen==="recap") app.innerHTML = recapHtml();
   if(S.screen==="done") app.innerHTML = doneHtml();
+  if(S.screen==="catalogue") app.innerHTML = catalogueHtml();
   renderBar();
 }
 
@@ -356,6 +373,7 @@ function homeHtml(){
   </section>
   ${CSE.ouvert?"":`<p class="closed">Les commandes sont closes${CSE.limite?" depuis le "+CSE.limite:""}. Rapprochez-vous de ${QUI} pour toute question.</p>`}
   <div class="frieze" aria-hidden="true">${BEERS.filter(b=>IMG[b.i]).map(b=>`<img src="${IMG[b.i]}" alt="">`).join("")}</div>
+  ${CATB().length?`<button class="catlink" type="button" data-go="catalogue"><span><b>Découvrir nos ${F.soft&&!(F.b33||F.b75)?"boissons":"bières"}</b><small>Styles, goûts, médailles : toutes les fiches en un coup d’œil.</small></span><span class="arr" aria-hidden="true">›</span></button>`:""}
   ${(CSE.retrait||CSE.lieu||CSE.creneau||CSE.paiement||CSE.contact)?`<section class="card"><p class="note" style="margin:0;line-height:1.7">${CSE.retrait?`<b>Livraison :</b> ${esc(CSE.retrait)}${CSE.lieu?", "+esc(CSE.lieu):""}<br>`:(CSE.lieu?`<b>Lieu de retrait :</b> ${esc(CSE.lieu)}<br>`:"")}${CSE.creneau?`<b>Créneau :</b> ${esc(CSE.creneau)}<br>`:""}${CSE.paiement?`<b>Paiement :</b> ${esc(CSE.paiement)}<br>`:""}${CSE.contact?`<b>Contact :</b> ${esc(CSE.contact)}`:""}</p></section>`:""}
   <ol class="how">
     <li><span class="n">1</span><p><b>Indiquez votre nom</b><small>Pour que ${ISCSE?"le CSE":"l’organisateur"} retrouve votre commande à la livraison.</small></p></li>
@@ -401,6 +419,20 @@ function cartonHtml(f){
     <div class="slots ${f==="75"?"big":""}" aria-hidden="true">${Array.from({length:k},(_,i)=>`<i class="slot${i<filled?" f":""}"></i>`).join("")}</div>
     <p>${msg}</p></div>`;
 }
+const CATB = () => BEERS.filter(b=>b.g==="soft"?F.soft:true);
+function catalogueHtml(){
+  const groups=[["classique","Bières classiques"],["speciale","Bières spéciales"],["soft","Softs bio · sans alcool"]];
+  const px=b=>b.g==="soft"?[["33 cl",b.p33]]:[F.b33||!F.b75?["33 cl",b.p33]:null,F.b75?["75 cl",b.p75]:null].filter(x=>x&&x[1]);
+  return `${demo}${topBar()}
+  <div><h2>Nos ${F.soft&&!(F.b33||F.b75)?"boissons":"bières"}</h2><p class="lead">Toutes nos bières sont bio et brassées à Saint-Étienne, dans le quartier de Bellevue.</p></div>
+  ${groups.map(([g,lab])=>{ const bs=CATB().filter(b=>b.g===g); if(!bs.length) return "";
+    return `<div class="group"><h3>${lab}</h3></div><div class="cat">${bs.map(b=>`<article class="ccard" style="--c:${b.c}">
+      <div class="pic">${plateImg(b,"Étiquette "+esc(b.n))}</div>
+      <div><h3>${esc(b.n)}</h3><p class="meta">${esc(b.s)}${b.d?" · "+esc(b.d):""}</p>${b.dev?`<p class="dev">${esc(b.dev)}</p>`:""}
+      ${b.desc?`<p class="d">${esc(b.desc)}</p>`:""}${b.med&&b.med.length?`<ul>${b.med.map(m=>`<li>${esc(m)}</li>`).join("")}</ul>`:""}
+      <div class="px">${px(b).map(([f,p])=>`<span>${f} · ${eur(p)}</span>`).join("")}</div></div></article>`).join("")}</div>`; }).join("")}
+  <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
+}
 function beerRow(b,f){
   const q=S.q[f][b.id]||0;
   return `<article class="beer${q?" has":""}" style="--c:${b.c}">
@@ -438,7 +470,7 @@ function bieresHtml(){
     else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${eur(groupPrice(g,f))} la bouteille</span></div>
       <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("");
   }
-  return `${demo}${topBar("bieres")}<div><h2>Votre commande</h2><p class="lead">Touchez une étiquette pour découvrir la bière.</p></div>${tabHtml}${body}`;
+  return `${demo}${topBar("bieres")}<div><h2>Votre commande</h2><p class="hint">Touchez une étiquette pour découvrir la bière, ou <button type="button" data-go="catalogue">voir toutes les fiches</button>.</p></div>${tabHtml}${body}`;
 }
 
 function myBoxHtml(x,i){
@@ -502,6 +534,7 @@ function doneHtml(){
 
 function renderBar(){
   const bar=$("#bar"), inn=$("#barIn");
+  if(S.screen==="catalogue"){ bar.hidden=false; const back=S.prev||"home"; inn.innerHTML=back==="home"?`<button class="ghost" data-go="home">Retour</button><div class="sum"></div>${CSE.ouvert?`<button class="cta" data-go="vous">Commencer ma commande</button>`:""}`:`<button class="cta" style="flex:1" data-go="${back}">Revenir à ma commande</button>`; return; }
   if(S.screen==="home"){ if(!CSE.ouvert){ bar.hidden=true; return; } bar.hidden=false; inn.innerHTML=`<button class="cta" style="flex:1" data-go="vous">Commencer ma commande</button>`; return; }
   if(S.screen==="vous"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="home">Retour</button><div class="sum"></div><button class="cta" data-next-vous>Choisir mes bières</button>`; return; }
   if(S.screen==="bieres"){
@@ -548,7 +581,7 @@ document.addEventListener("click",e=>{
   const d=t.dataset;
   if(d.close!==undefined){ if(S.compose!==null) refreshCompose(); else closeSheet(); return; }
   if(d.info){ openSheet(d.info); return; }
-  if(d.go){ go(d.go); return; }
+  if(d.go){ if(d.go==="catalogue") S.prev=S.screen; go(d.go); return; }
   if(d.goto){ if(d.goto==="vous") go("vous"); else { S.tab=d.goto; go("bieres"); } return; }
   if(d.tab){ S.tab=d.tab; render(); return; }
   if(d.inc||d.dec){ const f=S.tab, id=d.inc||d.dec; const v=(S.q[f][id]||0)+(d.inc?1:-1); S.q[f][id]=Math.max(0,Math.min(240,v)); if(!S.q[f][id]) delete S.q[f][id]; render(); bump(`q-${f}-${id}`); return; }

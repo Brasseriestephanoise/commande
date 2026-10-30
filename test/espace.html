@@ -86,6 +86,9 @@ tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:0}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
 .field{display:grid;gap:4px}
 .field label{font-weight:600;font-size:13px}
+.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:8px 10px;width:100%;font:inherit;resize:vertical}
+tr.fiche td{background:var(--bg)}
+tr.fiche .grid2{margin:4px 0}
 .field input,.field select{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:8px 10px;width:100%}
 .price{width:78px;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 7px;text-align:right;font-variant-numeric:tabular-nums}
 .price:disabled{opacity:.4}
@@ -493,17 +496,24 @@ function vGrilles(){
   <p class="note">La grille « CSE classique » reprend toujours les prix de base du catalogue : pour la modifier, change les prix dans l’onglet Catalogue.</p>`;
 }
 
+function catInit(){ return Object.fromEntries(P.map(p=>[p.id,{dispo:p.dispo,p33:p.p33,p75:p.p75,p:p.p,n:p.n,s:p.s,d:p.d||"",dev:p.dev||"",desc:p.desc||"",med:(p.med||"").split(";").map(x=>x.trim()).filter(Boolean).join("\n"),c:p.c}])); }
+function ficheHtml(p,x,cols){ const f=(k,l,ph)=>`<div class="field"><label>${l}</label><input data-cf="${p.id}" data-fk="${k}" value="${esc(x[k]||"")}" placeholder="${ph||""}"></div>`;
+  return `<tr class="fiche"><td colspan="${cols}"><div class="grid2">${f("n","Nom")}${f("s","Style","Ex. Blonde au miel")}${f("d","Degré","Ex. 5,5°")}${f("dev","Devise (en italique)","Ex. Bière de joie")}
+    <div class="field" style="grid-column:1/-1"><label>Description</label><textarea rows="4" data-cf="${p.id}" data-fk="desc">${esc(x.desc||"")}</textarea></div>
+    <div class="field" style="grid-column:1/-1"><label>Médailles (une par ligne)</label><textarea rows="3" data-cf="${p.id}" data-fk="med" placeholder="Médaille d’or 2026 – Concours International de Lyon">${esc(x.med||"")}</textarea></div>
+    <div class="field"><label>Couleur</label><input type="color" data-cf="${p.id}" data-fk="c" value="${esc(x.c||"#17936F")}"></div></div>
+    <p class="note">Ces textes s’affichent dans le catalogue et la fiche de la page de commande. Clique sur « Enregistrer le catalogue » pour les publier.</p></td></tr>`; }
 function vCatalogue(){
   const E=S.catEdit;
-  return `<div class="head"><div><h1>Catalogue</h1><p class="muted">Prix de base (grille CSE classique) et disponibilité de chaque produit.</p></div>
+  return `<div class="head"><div><h1>Catalogue</h1><p class="muted">Prix de base (grille CSE classique), disponibilité et fiche de chaque produit.</p></div>
     <div class="bar"><button class="btn" type="button" data-newprod>+ Ajouter un produit</button><button class="btn primary" type="button" data-catsave>Enregistrer le catalogue</button></div></div>
   ${S.newProd?newProdHtml():""}
   ${CATS.map(([cat,lab])=>{const ps=P.filter(p=>p.cat===cat); if(!ps.length) return ""; return `<section class="card"><h2>${lab}</h2><div class="scroll"><table><thead><tr><th>Produit</th><th>Disponible</th><th class="num">${cat==="box"?"Prix":"33 cl"}</th><th class="num">${cat==="box"||cat==="soft"?"":"75 cl"}</th>${cat==="box"?"":"<th>Étiquette</th>"}</tr></thead><tbody>
-    ${ps.map(p=>{const x=E[p.id]; return `<tr class="${x.dispo?"":"off"}"><td><span class="dot" style="background:${p.c}"></span><b>${esc(p.n)}</b><div class="sub" style="margin-left:20px">${esc(p.s)} ${esc(p.d||"")}</div></td>
+    ${ps.map(p=>{const x=E[p.id]; return `<tr class="${x.dispo?"":"off"}"><td><span class="dot" style="background:${p.c}"></span><b>${esc(p.n)}</b><div class="sub" style="margin-left:20px">${esc(p.s)} ${esc(p.d||"")}</div>${cat==="box"?"":`<button class="btn ghost small" type="button" data-cfiche="${p.id}" style="margin:4px 0 0 14px">${S.fiche===p.id?"Fermer la fiche":"Modifier la fiche"}</button>`}</td>
       <td><input type="checkbox" class="switch" data-cdispo="${p.id}" ${x.dispo?"checked":""} aria-label="${esc(p.n)} disponible"></td>
       <td class="num"><input class="price" data-cid="${p.id}" data-ck="${cat==="box"?"p":"p33"}" value="${fx(cat==="box"?x.p:x.p33)}"></td>
       <td class="num">${cat==="box"||cat==="soft"?"":`<input class="price" data-cid="${p.id}" data-ck="p75" value="${fx(x.p75)}">`}</td>
-      ${cat==="box"?"":`<td><label class="btn ghost small" style="cursor:pointer">${x.img?"✓ Nouvelle image":"Changer l’image"}<input type="file" accept="image/png,image/jpeg,image/webp" data-cimg="${p.id}" hidden></label></td>`}</tr>`;}).join("")}
+      ${cat==="box"?"":`<td><label class="btn ghost small" style="cursor:pointer">${x.img?"✓ Nouvelle image":"Changer l’image"}<input type="file" accept="image/png,image/jpeg,image/webp" data-cimg="${p.id}" hidden></label></td>`}</tr>${S.fiche===p.id?ficheHtml(p,x,5):""}`;}).join("")}
   </tbody></table></div>${cat==="soft"?'<p class="note">Les softs se commandent en cartons de 12 × 33 cl à part, sans mélange avec les bières.</p>':""}</section>`;}).join("")}`;
 }
 function newProdHtml(){ const n=S.newProd;
@@ -515,7 +525,9 @@ function newProdHtml(){ const n=S.newProd;
     <div class="field"><label for="np-p33">Prix 33 cl</label><input id="np-p33" data-np="p33" value="${esc(n.p33)}"></div>
     ${n.cat==="soft"?"":`<div class="field"><label for="np-p75">Prix 75 cl</label><input id="np-p75" data-np="p75" value="${esc(n.p75)}"></div>`}
     <div class="field"><label for="np-c">Couleur</label><input id="np-c" data-np="c" type="color" value="${esc(n.c)}"></div>
-    <div class="field"><label for="np-desc">Description (fiche)</label><input id="np-desc" data-np="desc" value="${esc(n.desc)}"></div>
+    <div class="field"><label for="np-dev">Devise (en italique)</label><input id="np-dev" data-np="dev" value="${esc(n.dev)}" placeholder="Ex. Bière de joie"></div>
+    <div class="field" style="grid-column:1/-1"><label for="np-desc">Description (fiche)</label><textarea id="np-desc" rows="3" data-np="desc">${esc(n.desc)}</textarea></div>
+    <div class="field" style="grid-column:1/-1"><label for="np-med">Médailles (une par ligne)</label><textarea id="np-med" rows="2" data-np="med">${esc(n.med)}</textarea></div>
     <div class="field"><label>Étiquette (image)</label><label class="btn small" style="cursor:pointer;justify-self:start">${n.img?"✓ Image choisie":"Choisir une image"}<input type="file" accept="image/png,image/jpeg,image/webp" data-npimg hidden></label></div>
   </div><div class="bar"><button class="btn primary" type="button" data-npadd>Ajouter au catalogue</button><button class="btn" type="button" data-npcancel>Annuler</button></div>
   <p class="note">Le nouveau produit est disponible tout de suite dans la grille CSE classique. Pour les autres grilles et ventes, active-le dans leurs produits.</p></section>`; }
@@ -549,7 +561,7 @@ document.addEventListener("click",e=>{
   if(d.acadd!==undefined){ const em=$("#ac-email").value.trim(), ro=$("#ac-role").value; if(!em){ toast("Indique l’adresse Google"); return; } run("",async()=>{ const r=await api("saveAcces",{email:em,role:ro}); S.acces=r.acces; render(); toast("Accès donné à "+em); }); return; }
   if(d.acdel){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const r=await api("saveAcces",{email:d.acdel,role:""}); S.acces=r.acces; render(); toast("Accès retiré"); }); return; }
   if(d.login!==undefined){ const m=($("#lk").value.match(/k=([A-Za-z0-9]+)/)||[])[1]; if(!m){ toast("Ce lien ne contient pas de clé (#k=…)"); return; } KEY=m; try{localStorage.setItem("bs_espace_k",m);}catch(err){} S.view="ventes"; run("",async()=>{await load(); render();}); return; }
-  if(d.nav){ go(d.nav,{gedit:null,newProd:null,catEdit:d.nav==="catalogue"?Object.fromEntries(P.map(p=>[p.id,{dispo:p.dispo,p33:p.p33,p75:p.p75,p:p.p}])):S.catEdit}); return; }
+  if(d.nav){ go(d.nav,{gedit:null,newProd:null,catEdit:d.nav==="catalogue"?catInit():S.catEdit}); return; }
   if(d.refresh!==undefined){ run("",async()=>{await load(); render(); toast("À jour");}); return; }
   if(d.open){ run("",()=>openVente(d.open)); return; }
   if(d.vtab){ S.tab=d.vtab; render(); return; }
@@ -583,11 +595,12 @@ document.addEventListener("click",e=>{
   if(d.gback!==undefined){ S.gedit=null; render(); return; }
   if(d.gsave!==undefined){ run("",async()=>{ const r=await api("saveGrille",{grille:S.gedit}); D.grilles=r.grilles; S.gedit=null; render(); toast("Grille enregistrée"); }); return; }
   if(d.gdel!==undefined){ if(t.dataset.confirm!=="1"){ t.dataset.confirm="1"; t.textContent="Confirmer la suppression"; return; } run("",async()=>{ const r=await api("delGrille",{id:S.gedit.id}); D.grilles=r.grilles; S.gedit=null; render(); toast("Grille supprimée"); }); return; }
-  if(d.catsave!==undefined){ const items=P.map(p=>Object.assign({id:p.id},S.catEdit[p.id])); run("",async()=>{ const r=await api("saveCatalogue",{items}); setCat(r.catalogue); S.catEdit=Object.fromEntries(P.map(p=>[p.id,{dispo:p.dispo,p33:p.p33,p75:p.p75,p:p.p}])); render(); toast("Catalogue enregistré"); }); return; }
-  if(d.newprod!==undefined){ S.newProd={n:"",cat:"classique",s:"",d:"",p33:"2,00",p75:"4,50",c:"#17936F",desc:"",img:""}; render(); return; }
+  if(d.catsave!==undefined){ const items=P.map(p=>Object.assign({id:p.id},S.catEdit[p.id])); run("",async()=>{ const r=await api("saveCatalogue",{items}); setCat(r.catalogue); S.catEdit=catInit(); render(); toast("Catalogue enregistré"); }); return; }
+  if(d.cfiche){ S.fiche=S.fiche===d.cfiche?null:d.cfiche; render(); return; }
+  if(d.newprod!==undefined){ S.newProd={n:"",cat:"classique",s:"",d:"",p33:"2,00",p75:"4,50",c:"#17936F",dev:"",desc:"",med:"",img:""}; render(); return; }
   if(d.npcancel!==undefined){ S.newProd=null; render(); return; }
   if(d.npadd!==undefined){ const n=S.newProd; if(!n.n.trim()){ toast("Indique le nom du produit"); return; }
-    run("",async()=>{ const r=await api("saveCatalogue",{items:[{nouveau:true,n:n.n,cat:n.cat,s:n.s,d:n.d,p33:num(n.p33),p75:num(n.p75),c:n.c,desc:n.desc,img:n.img}]}); setCat(r.catalogue); S.newProd=null; S.catEdit=Object.fromEntries(P.map(p=>[p.id,{dispo:p.dispo,p33:p.p33,p75:p.p75,p:p.p}])); render(); toast("Produit ajouté"); }); return; }
+    run("",async()=>{ const r=await api("saveCatalogue",{items:[{nouveau:true,n:n.n,cat:n.cat,s:n.s,d:n.d,p33:num(n.p33),p75:num(n.p75),c:n.c,dev:n.dev,desc:n.desc,med:n.med,img:n.img}]}); setCat(r.catalogue); S.newProd=null; S.catEdit=catInit(); render(); toast("Produit ajouté"); }); return; }
 });
 document.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr.row")){ e.preventDefault(); run("",()=>openVente(e.target.dataset.open)); } });
 document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset;
@@ -606,6 +619,7 @@ document.addEventListener("input",e=>{ const el=e.target;
   if(el.dataset.d){ const o=S.view==="nouvelle"?S.draft:S.edit; o[el.dataset.d]=el.value; if(S.view==="nouvelle"&&el.dataset.d==="nom"){ o.code=slug(el.value); const c=$("#d-code"); if(c) c.value=o.code; } }
   if(el.dataset.g&&S.gedit) S.gedit[el.dataset.g]=el.value;
   if(el.dataset.np&&S.newProd) S.newProd[el.dataset.np]=el.value;
+  if(el.dataset.cf&&S.catEdit&&S.catEdit[el.dataset.cf]) S.catEdit[el.dataset.cf][el.dataset.fk]=el.value;
   if(el.id==="saveName"&&S.draft){ S.draft.saveName=el.value; S.draft.saveAs=!!el.value.trim(); const c=$("#saveAs"); if(c) c.checked=S.draft.saveAs; } });
 
 render();
