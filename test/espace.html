@@ -300,14 +300,14 @@ function qtyBy(){ const q={}; const add=(id,k,n)=>{q[id]=q[id]||{q33:0,q75:0,sof
 function vExports(){
   const v=S.cur.vente, cf=S.cur.config, q=qtyBy(), t=totals();
   let html=`<section class="card"><h2>Récaps</h2><div class="grid2">
-    <button class="gcard ${S.exp==="prep"?"sel":""}" type="button" data-exp="prep"><h3>Récap de préparation</h3><span class="note">Cartons par format, quantités par produit, liste par personne.</span></button>
+    <button class="gcard ${S.exp==="prep"?"sel":""}" type="button" data-exp="prep"><h3>Récap de préparation</h3><span class="note">Client par client, carton par carton, avec le récap du stock à sortir.</span></button>
     <button class="gcard ${S.exp==="fact"?"sel":""}" type="button" data-exp="fact"><h3>Récap à facturer</h3><span class="note">Lignes au prix brasserie${cf.resale?", avec le total encaissé et la marge de l’organisateur":""}.</span></button></div>`;
   if(S.exp==="prep"){
     let t33=0,t75=0,ts=0,tb=0; const rows=P.filter(p=>q[p.id]).map(p=>{const x=q[p.id];t33+=x.q33;t75+=x.q75;ts+=x.soft;tb+=x.bx;return `<tr><td><span class="dot" style="background:${p.c}"></span>${esc(p.n)}</td><td class="num">${p.cat==="soft"?x.soft||"–":x.q33||"–"}</td><td class="num">${x.q75||"–"}</td><td class="num">${x.bx||"–"}</td></tr>`;}).join("");
     html+=`<div class="preview"><div class="head"><h3>Préparation · ${esc(v.nom)}</h3><div class="bar"><button class="btn small primary" type="button" data-xls="prep">Télécharger Excel</button></div></div>
       <div class="sum">${t33?`<div><b>${t33/12}</b><span>cartons bière 12 × 33 cl · ${t33} bouteilles</span></div>`:""}${t75?`<div><b>${t75/6}</b><span>cartons bière 6 × 75 cl · ${t75} bouteilles</span></div>`:""}${ts?`<div><b>${ts/12}</b><span>cartons soft 12 × 33 cl · ${ts} bouteilles</span></div>`:""}${tb?`<div><b>${tb}</b><span>coffrets</span></div>`:""}</div>
       <div class="scroll"><table><thead><tr><th>Produit</th><th class="num">33 cl</th><th class="num">75 cl</th><th class="num">Coffrets</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="muted">Aucune commande.</td></tr>`}</tbody></table></div>
-      <p class="note">Le fichier Excel contient aussi un onglet « Par personne » (une ligne par commande, une colonne par produit), pour la mise en sachets.</p></div>`;
+      <p class="note">Le fichier Excel contient 3 onglets : « Préparation » (client par client, carton par carton, avec cases Préparé / Payé), « Récap » (stock à sortir) et « Tableau » (une ligne par client, une colonne par produit).</p></div>`;
   }
   if(S.exp==="fact"){
     const L=factLines();
@@ -328,22 +328,94 @@ function factLines(){ const q=qtyBy(), pr=S.cur.config.prix, L=[];
     if(x.q75) L.push([p.n+" 75 cl",x.q75,c.b75??p.p75,c.v75??c.b75??p.p75]); });
   return L; }
 
+function loadJs(u){ return new Promise((ok,ko)=>{ if(document.querySelector(`script[src="${u}"]`)&&window.ExcelJS) return ok(); const s=document.createElement("script"); s.src=u; s.onload=ok; s.onerror=ko; document.head.appendChild(s); }); }
+async function xlsPrep(){
+  try{ if(!window.ExcelJS) { toast("Préparation du fichier…"); await loadJs("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"); } }
+  catch(e){ toast("Le module Excel n’a pas pu se charger. Vérifie ta connexion."); return; }
+  const v=S.cur.vente, cf=S.cur.config, pr=cf.prix||{}, name=slug(v.nom)||"vente";
+  const O=S.cur.orders.slice().sort((a,b)=>a.n-b.n);
+  const up=(p,f)=>{ const c=pr[p.id]||{}; if(p.cat==="box") return cf.resale?(c.v??c.b??p.p):(c.b??p.p); const k=f==="75"?"75":"33", base=p["p"+k];
+    return cf.resale?(c["v"+k]??c["b"+k]??base):(c["b"+k]??base); };
+  const FM=[["33","Carton bière 12 × 33 cl",12,"33 CL","FCE4D6"],["75","Carton bière 6 × 75 cl",6,"75 CL","DDEBF7"],["soft","Carton soft 12 × 33 cl",12,"SOFTS","E2EFDA"]];
+  const qOf=(o,f,p)=>f==="box"?((o.bx||{})[p.id]||0):(((o.q||{})[f]||{})[p.id]||0);
+  const prods=f=>P.filter(p=>f==="box"?p.cat==="box":f==="soft"?p.cat==="soft":(p.cat!=="soft"&&p.cat!=="box"));
+  const nb=x=>Number.isInteger(x)?x:Math.round(x*100)/100;
+  const liv=[v.livraison?"Livraison : "+new Date(v.livraison+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}):(v.livraisonTxt?"Livraison : "+v.livraisonTxt:""),v.lieu||"",v.creneau||"",O.length+" commande"+(O.length>1?"s":"")].filter(Boolean).join(" · ");
+  const wb=new ExcelJS.Workbook(); wb.creator="La Brasserie Stéphanoise";
+  const thin={style:"thin",color:{argb:"FF999999"}}, BD={top:thin,left:thin,bottom:thin,right:thin};
+  const fill=c=>({type:"pattern",pattern:"solid",fgColor:{argb:"FF"+c}}), EUR='#,##0.00 "€"';
+  const head=(ws,title)=>{ ws.getCell("A1").value=v.nom+" – "+title; ws.getCell("A1").font={size:18,bold:true}; ws.getCell("A2").value=liv; ws.getCell("A2").font={italic:true}; };
+  // ---------- PRÉPARATION ----------
+  const W=wb.addWorksheet("PRÉPARATION",{views:[{state:"frozen",ySplit:4}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}});
+  head(W,"Préparation par client");
+  W.columns=[5,24,28,60,11,12,9,7].map(w=>({width:w}));
+  const H=W.getRow(4); H.values=["N°","Client","Contenant","Détail","Bouteilles","Montant","Préparé","Payé"];
+  H.eachCell(c=>{ c.font={bold:true,color:{argb:"FFFFFFFF"}}; c.fill=fill("404040"); c.border=BD; c.alignment={horizontal:"center"}; });
+  let r=5, totV=0;
+  O.forEach((o,i)=>{
+    const rows=[];
+    FM.forEach(([f,lab,div])=>{ const it=prods(f).map(p=>[p,qOf(o,f,p)]).filter(x=>x[1]); if(!it.length) return;
+      const n=it.reduce((a,x)=>a+x[1],0), m=it.reduce((a,[p,q])=>a+q*up(p,f),0), k=nb(n/div);
+      rows.push([k===1?lab:k+" × "+lab, it.map(([p,q])=>q+" "+p.n).join(", "), n, m]); });
+    const bx=prods("box").map(p=>[p,qOf(o,"box",p)]).filter(x=>x[1]);
+    if(bx.length) rows.push([bx.map(([p,q])=>q+" × "+p.n).join(", "), o.compo||"", "", bx.reduce((a,[p,q])=>a+q*up(p),0)]);
+    if(!rows.length) rows.push(["","(commande vide)","",0]);
+    const s0=r;
+    rows.forEach((x,k)=>{ const R=W.getRow(r);
+      R.values=[k?null:o.n, k===0?((o.nom||"").toUpperCase()+" "+(o.prenom||"")).trim():(k===1&&o.service?o.service:null), x[0], x[1], x[2]===""?null:x[2], Math.round(x[3]*100)/100, "☐", k?null:"☐"];
+      if(k===0) R.getCell(2).font={bold:true,size:12}; else if(k===1&&o.service) R.getCell(2).font={italic:true,color:{argb:"FF666666"}};
+      r++; });
+    const T=W.getRow(r);
+    if(rows.length===1&&o.service){ T.getCell(2).value=o.service; T.getCell(2).font={italic:true,color:{argb:"FF666666"}}; }
+    T.getCell(5).value="Total"; T.getCell(5).font={italic:true};
+    T.getCell(6).value=o.montant; T.getCell(6).font={bold:true};
+    totV+=o.montant||0;
+    for(let rr=s0; rr<=r; rr++) for(let c=1;c<=8;c++){ const C=W.getRow(rr).getCell(c); C.border=BD;
+      C.alignment={vertical:"top",wrapText:c===4||c===3,horizontal:[1,5,7,8].includes(c)?"center":undefined};
+      if(c===6) C.numFmt=EUR; if(i%2===0) C.fill=fill("F2F2F2"); }
+    r++; });
+  const TV=W.getRow(r+0); TV.getCell(2).value="TOTAL VENTE"; TV.getCell(2).font={bold:true,size:12}; TV.getCell(6).value=Math.round(totV*100)/100; TV.getCell(6).font={bold:true,size:12}; TV.getCell(6).numFmt=EUR;
+  // ---------- RÉCAP ----------
+  const R=wb.addWorksheet("RÉCAP",{pageSetup:{orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}});
+  head(R,"Récap à sortir du stock"); R.columns=[12,40,22,10].map(w=>({width:w}));
+  R.getRow(4).values=["Format","Produit","Bouteilles / coffrets","Cartons"]; R.getRow(4).eachCell(c=>{c.font={bold:true};c.fill=fill("D9D9D9");c.border=BD;});
+  let rr=5; const tots=[];
+  FM.concat([["box","",0,"COFFRETS","FFF2CC"]]).forEach(([f,lab,div,g,col])=>{ let tot=0;
+    prods(f).forEach(p=>{ const n=O.reduce((a,o)=>a+qOf(o,f,p),0); if(!n) return; tot+=n;
+      const X=R.getRow(rr++); X.values=[g,p.n,n,div?nb(n/div):null]; X.eachCell({includeEmpty:true},(c,k)=>{ if(k<=4){ c.border=BD; if(k===1) c.fill=fill(col); if(k>=3) c.alignment={horizontal:"center"}; }}); });
+    if(tot) tots.push([g==="COFFRETS"?"Total coffrets":"Total "+g.toLowerCase().replace("softs","softs"),tot,div?nb(tot/div):null]); });
+  rr++; tots.forEach(t=>{ const X=R.getRow(rr++); X.values=[null,t[0],t[1],t[2]]; X.font={bold:true}; X.getCell(3).alignment=X.getCell(4).alignment={horizontal:"center"}; });
+  const M=R.getRow(rr); M.values=[null,"MONTANT TOTAL",Math.round(totV*100)/100]; M.font={bold:true,size:12}; M.getCell(3).numFmt=EUR;
+  // ---------- TABLEAU ----------
+  const G=[]; FM.concat([["box","",0,"COFFRETS","FFF2CC"]]).forEach(([f,lab,div,g,col])=>prods(f).forEach(p=>{ if(O.some(o=>qOf(o,f,p))) G.push({f,p,g,col,div,u:up(p,f)}); }));
+  const T=wb.addWorksheet("TABLEAU",{views:[{state:"frozen",xSplit:3,ySplit:6}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}});
+  head(T,"Tableau des commandes");
+  const c0=4, end=c0+G.length-1, ex=["Bouteilles\n33 cl","Cartons\n12×33","Bouteilles\n75 cl","Cartons\n6×75","Softs","Cartons\nsofts","Coffrets","Montant","Composition des coffrets","Préparé","Payé"];
+  T.getRow(5).values=["N°","Nom","Prénom"].concat(G.map(x=>x.p.n),ex); T.getRow(6).getCell(3).value="Prix unitaire";
+  let s=c0; ["33 CL","75 CL","SOFTS","COFFRETS"].forEach(g=>{ const n=G.filter(x=>x.g===g).length; if(!n) return; T.getRow(4).getCell(s).value=g; if(n>1) T.mergeCells(4,s,4,s+n-1); s+=n; });
+  G.forEach((x,j)=>{ const c=c0+j; T.getRow(6).getCell(c).value=x.u; [4,5,6].forEach(rw=>T.getRow(rw).getCell(c).fill=fill(x.col)); });
+  T.getRow(4).font={bold:true,size:12}; T.getRow(4).alignment={horizontal:"center"}; T.getRow(5).height=42;
+  const sumF=(o,f,div)=>G.filter(x=>x.f===f).reduce((a,x)=>a+qOf(o,f,x.p),0);
+  O.forEach((o,i)=>{ const X=T.getRow(7+i), b33=sumF(o,"33"), b75=sumF(o,"75"), so=sumF(o,"soft"), bx=sumF(o,"box");
+    X.values=[o.n,(o.nom||"").toUpperCase(),o.prenom||""].concat(G.map(x=>qOf(o,x.f,x.p)||null),[b33||null,b33?nb(b33/12):null,b75||null,b75?nb(b75/6):null,so||null,so?nb(so/12):null,bx||null,o.montant,o.compo||null,"☐","☐"]); });
+  const rt=7+O.length, TT=T.getRow(rt), CT=T.getRow(rt+1); TT.getCell(2).value="TOTAL"; CT.getCell(2).value="Cartons";
+  for(let c=c0;c<=end+8;c++){ let t=0; for(let k=0;k<O.length;k++){ const val=T.getRow(7+k).getCell(c).value; t+=typeof val==="number"?val:0; } TT.getCell(c).value=Math.round(t*100)/100; }
+  G.forEach((x,j)=>{ if(x.div) CT.getCell(c0+j).value=nb(TT.getCell(c0+j).value/x.div); });
+  T.getColumn(1).width=5; T.getColumn(2).width=14; T.getColumn(3).width=12; for(let c=c0;c<=end+11;c++) T.getColumn(c).width=10; T.getColumn(end+9).width=34;
+  for(let rw=4; rw<=rt+1; rw++) for(let c=1;c<=end+11;c++){ const C=T.getRow(rw).getCell(c); C.border=BD;
+    if(rw===5) { C.font={bold:true}; C.alignment={wrapText:true,horizontal:"center",vertical:"middle"}; }
+    if(rw===6&&c>=c0&&c<=end){ C.font={bold:true,color:{argb:"FFC00000"}}; C.numFmt=EUR; }
+    if(rw>=7&&c>=c0&&c!==end+9) C.alignment={horizontal:"center"};
+    if(c===end+8&&rw>=7) C.numFmt=EUR;
+    if(rw===rt){ C.font={bold:true,size:12}; C.fill=fill("C6E0B4"); } }
+  const buf=await wb.xlsx.writeBuffer(); const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})); a.download="preparation-"+name+".xlsx"; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+}
 function xls(kind){
+  if(kind==="prep"){ xlsPrep(); return; }
   if(!window.XLSX){ toast("Le module Excel n’a pas pu se charger. Vérifie ta connexion."); return; }
   const v=S.cur.vente, cf=S.cur.config, wb=XLSX.utils.book_new(), name=slug(v.nom)||"vente";
-  if(kind==="prep"){
-    const q=qtyBy(); const a=[["Préparation – "+v.nom],["Livraison : "+(v.livraison?dfr(v.livraison):v.livraisonTxt||"")+(v.lieu?" · "+v.lieu:"")],[],["Produit","33 cl","75 cl","Coffrets"]];
-    let t33=0,t75=0,ts=0,tb=0;
-    P.filter(p=>q[p.id]).forEach(p=>{const x=q[p.id];t33+=x.q33;t75+=x.q75;ts+=x.soft;tb+=x.bx;a.push([p.n,(p.cat==="soft"?x.soft:x.q33)||"",x.q75||"",x.bx||""]);});
-    a.push([],["Cartons bière 12 × 33 cl",t33/12],["Cartons bière 6 × 75 cl",t75/6],["Cartons soft 12 × 33 cl",ts/12],["Coffrets",tb]);
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"Récap");
-    const cols=[]; P.forEach(p=>{ if(p.cat==="box") cols.push([p.n,o=>o.bx[p.id]]); else if(p.cat==="soft") cols.push([p.n,o=>o.q.soft[p.id]]); else { cols.push([p.n+" 33",o=>o.q["33"][p.id]]); cols.push([p.n+" 75",o=>o.q["75"][p.id]]); } });
-    const used=cols.filter(([,f])=>S.cur.orders.some(o=>f(o)));
-    const b=[["N°","Nom","Prénom","Service","Téléphone","E-mail"].concat(used.map(c=>c[0]),["Composition coffrets",cf.resale?"Payé par l’acheteur":"Montant"])];
-    S.cur.orders.forEach(o=>b.push([o.n,o.nom,o.prenom,o.service,o.tel,o.email].concat(used.map(([,f])=>f(o)||""),[o.compo,o.montant])));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(b),"Par personne");
-    XLSX.writeFile(wb,"preparation-"+name+".xlsx");
-  } else {
+  {
     const t=totals(), L=factLines(); const a=[["À facturer – "+v.nom],[v.resp?("Contact : "+v.resp+" "+(v.email||"")):""],[],["Produit","Quantité","Prix brasserie","Total"].concat(cf.resale?["Prix de vente","Encaissé"]:[])];
     L.forEach(l=>a.push([l[0],l[1],l[2],+(l[1]*l[2]).toFixed(2)].concat(cf.resale?[l[3],+(l[1]*l[3]).toFixed(2)]:[])));
     a.push([],["Total à facturer","","",+t.fac.toFixed(2)]); if(cf.resale) a.push(["Encaissé par l’organisateur","","",+t.enc.toFixed(2)],["Marge de l’organisateur","","",+(t.enc-t.fac).toFixed(2)]);
