@@ -711,7 +711,7 @@ if (Q.get("desinscription")) {
 } else if (!Q.get("cse")) {
   showMessage("Lien incomplet", "Ce lien de commande est incomplet. Utilisez le lien envoyé par votre CSE.");
 } else if (Q.has("cle")) {
-  api({api:"suivi", cse:Q.get("cse"), cle:Q.get("cle")}).then(r=> r.ok ? startSuivi(r.data) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
+  (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"suivi", cse:Q.get("cse"), cle:Q.get("cle")})).then(r=> r.ok ? startSuivi(r.data) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
 } else {
   (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"page", cse:Q.get("cse")})).then(r=> r.ok ? startOrder(r.data) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
 }
