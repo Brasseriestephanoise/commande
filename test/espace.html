@@ -199,7 +199,7 @@ function vVentes(){
   const fac = open.reduce((a,v)=>a+v.aFacturer,0), cmd = open.reduce((a,v)=>a+v.n,0);
   const rows = vs.map(v=>{const st=status(v);return `<tr class="row" tabindex="0" data-open="${esc(v.code)}">
     <td><b>${esc(v.nom)}</b><div class="sub">${esc(v.resp||"")}</div></td>
-    <td><span class="pill ${st.k}">${st.t}</span></td>
+    <td><span class="pill ${st.k}">${st.t}</span>${v.livraison&&v.dateOk===false?' <span class="pill soon">Date à confirmer</span>':""}</td>
     <td>${esc(gName(v))}${v.resale?' <span class="tag resale">Revente</span>':""}</td>
     <td class="num">${dfr(v.limite)}</td><td class="num">${v.livraison?dfr(v.livraison):esc(v.livraisonTxt||"–")}</td>
     <td class="num">${v.n}</td><td class="num">${eur(v.aFacturer)}</td></tr>`;}).join("");
@@ -225,6 +225,7 @@ function vVente(){
       ${cf.resale?`<div><b>${eur(t.enc)}</b><span>payé par les acheteurs</span></div><div class="hl"><b>${eur(t.fac)}</b><span>à facturer à l’organisateur</span></div><div><b>${eur(t.enc-t.fac)}</b><span>marge de l’organisateur</span></div>`
       :`<div class="hl"><b>${eur(t.fac)}</b><span>à facturer</span></div>`}
       <div><b>${C.orders.length}</b><span>commandes</span></div></div>
+    ${v.livraison&&v.dateOk===false?`<section class="card" style="border-color:var(--warn)"><h2>Date de livraison à confirmer</h2><p style="margin:0">L’organisateur demande une livraison le <b>${dfr(v.livraison)}</b>${v.limite?" (date limite de commande : "+dfr(v.limite)+")":""}.</p><div class="bar"><button class="btn primary" type="button" data-confirmdate>Confirmer cette date</button><span class="muted">ou</span><input type="date" id="altdate" class="price" style="width:auto"><button class="btn" type="button" data-confirmalt>Confirmer une autre date</button></div><p class="note">L’organisateur reçoit un e-mail de confirmation.</p></section>`:""}
     <section class="card"><h2>Liens</h2><div class="links">
       <div class="link"><div class="l"><b>Lien à diffuser</b> <span class="sub">${cf.resale?"aux adhérents / parents":"aux salariés"}</span><code>${esc(venteUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(venteUrl(v))}">Copier</button></div>
       <div class="link"><div class="l"><b>Lien du responsable</b> <span class="sub">suivi des commandes, à ne pas diffuser</span><code>${esc(suiviUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(suiviUrl(v))}">Copier</button></div>
@@ -233,6 +234,8 @@ function vVente(){
       <div><div class="sub">Responsable</div>${esc(v.resp||"–")}<div class="sub" style="margin-top:2px">${esc(v.email||"")} ${esc(v.tel||"")}</div></div>
       <div><div class="sub">Date limite</div>${dfr(v.limite)}${v.limite?" · 23 h 59":""}</div>
       <div><div class="sub">Livraison / retrait</div>${[v.livraison?dfr(v.livraison):v.livraisonTxt,v.lieu].filter(Boolean).map(esc).join(" · ")||"–"}</div>
+      <div><div class="sub">Créneau · paiement · contact</div>${esc([v.creneau,v.paiement,v.contact].filter(Boolean).join(" · ")||"–")}</div>
+      <div><div class="sub">Date de livraison</div>${v.livraison?(v.dateOk===false?"À confirmer":"Confirmée"):"–"}</div>
       <div><div class="sub">Formats</div>${FMTS.filter(([k])=>cf.formats[k]).map(([,l])=>l).join(", ")}</div>
     </div>${cf.configured?"":`<p class="note">Vente créée avant l’Espace brasserie : elle garde le fonctionnement d’origine (catalogue et prix de base, sans softs) tant que tu n’enregistres pas de changement.</p>`}</section>`;
   if (S.tab==="infos") body = `<section class="card"><h2>Infos de la vente</h2>${infoFields(S.edit, false)}
@@ -346,7 +349,7 @@ function infoFields(d, isNew){
   const f=(k,l,ph,type="text")=>`<div class="field"><label for="d-${k}">${l}</label><input id="d-${k}" data-d="${k}" type="${type}" placeholder="${esc(ph)}" value="${esc(d[k]||"")}" ${k==="code"&&!isNew?"disabled":""}></div>`;
   return `<div class="grid2">${f("nom","Nom de la vente","Ex. APE École Jules Ferry")}${f("code","Code du lien",isNew?"se remplit tout seul":"")}
     ${f("resp","Responsable","Prénom Nom")}${f("email","E-mail du responsable","Pour lui envoyer son lien de suivi","email")}${f("tel","Téléphone du responsable","")}
-    ${f("limite","Date limite de commande","","date")}${f("livraison","Date de livraison / retrait","","date")}${f("lieu","Lieu de livraison","Ex. Accueil du site")}</div>
+    ${f("limite","Date limite de commande","","date")}${f("livraison","Date de livraison / retrait","","date")}${f("lieu","Lieu de livraison","Ex. Accueil du site")}${f("creneau","Créneau de retrait","Ex. vendredi 16 h 30 – 18 h")}${f("contact","Contact sur place (affiché aux acheteurs)","Ex. Marie, 06 12 34 56 78")}${f("paiement","Modalités de paiement","Ex. chèque à l’ordre de l’APE")}${f("message","Message d’accueil (page de commande)","Ex. Vente au profit du voyage des CM2")}</div>
     ${isNew?"":`<p class="note">Le code du lien ne change plus une fois la vente créée : les liens ont peut-être déjà été envoyés.</p>`}`;
 }
 function vNouvelle(){
@@ -423,9 +426,9 @@ async function load(){ const j=await api("init"); D=j.data; setCat(D.catalogue);
 async function openVente(code){ const j=await api("vente",{code}); setCur(j.data); go("vente",{tab:S.view==="vente"&&S.cur&&S.cur.vente.code===code?S.tab:"apercu",exp:null}); }
 function setCur(data){ S.cur=data; const v=data.vente, c=data.config;
   S.edit={nom:v.nom,code:v.code,resp:v.resp,email:v.email,tel:v.tel,limite:v.limite,livraison:v.livraison,lieu:v.lieu,livraisonTxt:v.livraisonTxt,
-    resale:c.resale,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
+    creneau:v.creneau,contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
   const i=D.ventes.findIndex(x=>x.code===v.code); const sv=Object.assign({},v,{configured:c.configured}); if(i>=0) D.ventes[i]=sv; else D.ventes.unshift(sv); }
-function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email,tel:d.tel,limite:d.limite,livraison:d.livraison,livraisonTxt:d.livraison?"":d.livraisonTxt,lieu:d.lieu}; }
+function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email,tel:d.tel,limite:d.limite,livraison:d.livraison,livraisonTxt:d.livraison?"":d.livraisonTxt,lieu:d.lieu,creneau:d.creneau,contact:d.contact,message:d.message,paiement:d.paiement}; }
 function cfgOf(d){ return {resale:d.resale,grille:d.grille||"",formats:d.formats,prix:d.prix}; }
 
 document.addEventListener("click",e=>{
@@ -438,6 +441,8 @@ document.addEventListener("click",e=>{
   if(d.exp){ S.exp=d.exp; render(); return; }
   if(d.xls){ xls(d.xls); return; }
   if(d.copy){ copy(d.copy); return; }
+  if(d.confirmdate!==undefined){ run("",async()=>{ const j=await api("confirmDate",{code:S.cur.vente.code}); setCur(j.data); render(); toast("Date confirmée : l’organisateur est prévenu par e-mail"); }); return; }
+  if(d.confirmalt!==undefined){ const x=$("#altdate").value; if(!x){ toast("Choisis d’abord une date"); return; } run("",async()=>{ const j=await api("confirmDate",{code:S.cur.vente.code,livraison:x}); setCur(j.data); render(); toast("Nouvelle date confirmée : l’organisateur est prévenu par e-mail"); }); return; }
   if(d.close!==undefined||d.reopen!==undefined||d.extend!==undefined){ const v=S.cur.vente; let p={code:v.code};
     if(d.close!==undefined) p.statut="Fermé";
     if(d.reopen!==undefined){ p.statut="Ouvert"; if(v.limite&&daysTo(v.limite)<0){ const n=new Date(TODAY); n.setDate(n.getDate()+7); p.limite=n.toISOString().slice(0,10);} }

@@ -194,6 +194,19 @@ h2{font-size:21px;margin:0;font-weight:700;text-wrap:balance}
 .msgpage .logo{align-self:flex-start}
 </style>
 <style id="cssSuivi" media="not all">
+.og{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.og label{display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:700}
+.og input,.og textarea{font:inherit;font-weight:400;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--ink);width:100%}
+.og .full{grid-column:1/-1}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:700;border-radius:10px;padding:10px 16px;cursor:pointer;min-height:44px;border:1px solid var(--line);background:none;color:var(--ink)}
+.btn.main{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn:disabled{opacity:.6;cursor:wait}
+.st{border-radius:10px;padding:10px 12px;margin:0;font-weight:700}
+.st.ok{background:rgba(23,147,111,.13);color:var(--brand)}
+.st.wait{background:var(--warn-bg);color:var(--warn)}
+.chk{width:22px;height:22px;accent-color:var(--brand);cursor:pointer}
+
 /* Tableau de suivi pour le responsable CSE : synthèse d'abord, détail ensuite. */
 :root{--bg:#F7F2E8;--surface:#FFFFFF;--ink:#231F20;--muted:#6E645B;--line:#E6DCCC;--brand:#17936F;--plate:#FCFAF4;--warn:#B4470F;--warn-bg:#FCE7D8;
   --f:"Roboto Condensed","Arial Narrow",Arial,sans-serif}
@@ -339,10 +352,11 @@ function homeHtml(){
   <section class="hero">
     <p class="eyebrow">Commande groupée</p>
     <h1>${ISCSE?"Les bières bio de Saint-Étienne, livrées à votre travail":"Les bières bio de Saint-Étienne, en commande groupée"}</h1>
-    <div class="cse"><span class="lead">Commande organisée par</span>${CSE.limiteCourt?`<span class="dl">Date limite<strong>${CSE.limiteCourt}</strong></span>`:""}<b>${esc(CSE.nom)}</b></div>
+    <div class="cse"><span class="lead">Commande organisée par</span>${CSE.limiteCourt?`<span class="dl">Date limite<strong>${CSE.limiteCourt}</strong></span>`:""}<b>${esc(CSE.nom)}</b></div>${CSE.message?`<p class="lead" style="margin-top:14px;white-space:pre-line">${esc(CSE.message)}</p>`:""}
   </section>
   ${CSE.ouvert?"":`<p class="closed">Les commandes sont closes${CSE.limite?" depuis le "+CSE.limite:""}. Rapprochez-vous de ${QUI} pour toute question.</p>`}
   <div class="frieze" aria-hidden="true">${BEERS.filter(b=>IMG[b.i]).map(b=>`<img src="${IMG[b.i]}" alt="">`).join("")}</div>
+  ${(CSE.retrait||CSE.lieu||CSE.creneau||CSE.paiement||CSE.contact)?`<section class="card"><p class="note" style="margin:0;line-height:1.7">${CSE.retrait?`<b>Livraison :</b> ${esc(CSE.retrait)}${CSE.lieu?", "+esc(CSE.lieu):""}<br>`:(CSE.lieu?`<b>Lieu de retrait :</b> ${esc(CSE.lieu)}<br>`:"")}${CSE.creneau?`<b>Créneau :</b> ${esc(CSE.creneau)}<br>`:""}${CSE.paiement?`<b>Paiement :</b> ${esc(CSE.paiement)}<br>`:""}${CSE.contact?`<b>Contact :</b> ${esc(CSE.contact)}`:""}</p></section>`:""}
   <ol class="how">
     <li><span class="n">1</span><p><b>Indiquez votre nom</b><small>Pour que ${ISCSE?"le CSE":"l’organisateur"} retrouve votre commande à la livraison.</small></p></li>
     <li><span class="n">2</span><p><b>Choisissez vos ${F.b33||F.b75?"bières":"coffrets"}${(F.b33||F.b75)&&F.box?" et coffrets":""}</b><small>${[F.b33?"33 cl par cartons de 12":"",F.b75?"75 cl par cartons de 6":"",F.soft?"softs par cartons de 12":""].filter(Boolean).join(", ")}${F.b33||F.b75?". Vous pouvez mélanger les bières dans un carton.":""}</small></p></li>
@@ -474,6 +488,7 @@ function recapHtml(){
   <div class="tot"><span>Total</span><span>${eur(total())}</span></div>
   ${nb?`<p class="note">Dont ${eur(boxSaving())} d’économie sur les coffrets.</p>`:""}
   <p class="note">Règlement à la livraison, auprès de ${QUI}. ${CSE.retrait?"Retrait ou livraison : "+esc(CSE.retrait)+(CSE.lieu?", "+esc(CSE.lieu):"")+".":"Retrait ou livraison : date communiquée par "+QUI+"."}</p>
+  ${CSE.creneau||CSE.paiement?`<p class="note">${CSE.creneau?"Créneau : "+esc(CSE.creneau)+". ":""}${CSE.paiement?"Paiement : "+esc(CSE.paiement)+".":""}</p>`:""}
   ${sendError?`<p class="err-box" role="alert">${esc(sendError)}</p>`:""}
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
 }
@@ -626,6 +641,69 @@ document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
       .catch(()=>{ err.textContent="Connexion impossible. Vérifiez votre connexion puis réessayez."; err.hidden=false; yes.disabled=false; yes.textContent="Oui, supprimer"; });
   };
 });
+suiviExtras(D);
+}
+
+
+function suiviExtras(D){
+  const C=D.cse, og=C.orga||{}, main=document.querySelector("#app main"); if(!main) return;
+  const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const eur=v=>Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+  const fr=s=>s?new Date(s+"T12:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}):"";
+  const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const livMin=lim=>{ if(!lim) return ""; const d=new Date(lim+"T12:00"); let n=0; while(n<4){ d.setDate(d.getDate()+1); const w=d.getDay(); if(w!==0&&w!==6&&!(C.feries||[]).includes(iso(d))) n++; } return iso(d); };
+  const post=(op,extra)=>fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({action:"orga",op,cse:Q.get("cse"),cle:Q.get("cle")},extra||{}))}).then(r=>r.json());
+  const status = C.livraisonIso ? (C.dateOk?`<p class="st ok">Livraison confirmée par la brasserie : ${fr(C.livraisonIso)}.</p>`:`<p class="st wait">Livraison demandée le ${fr(C.livraisonIso)} : en attente de confirmation par la brasserie.</p>`) : `<p class="st wait">Aucune date de livraison choisie pour l’instant.</p>`;
+  const prixHtml = C.resale && D.prix && D.prix.length ? `<div class="full"><h2 style="margin:8px 0">Vos prix de vente</h2><p class="meta">Le prix payé par vos acheteurs. Il ne peut pas être inférieur au prix brasserie.</p><div class="scroll"><table><thead><tr><th>Produit</th><th class="n">Prix brasserie</th><th class="n">Votre prix</th></tr></thead><tbody>${D.prix.map((p,i)=>`<tr><td>${esc(p.n)}</td><td class="n">${eur(p.b)}</td><td class="n"><input class="pv" data-i="${i}" inputmode="decimal" value="${Number(p.v).toFixed(2).replace(".",",")}" style="width:84px;text-align:right;font:inherit;border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--bg);color:var(--ink)"></td></tr>`).join("")}</tbody></table></div></div>`:"";
+  const sec=document.createElement("section"); sec.className="card";
+  sec.innerHTML=`<h2>Réglages de votre vente</h2>${status}
+   <div class="og">
+    <label>Date limite de commande<input type="date" id="og-lim" value="${esc(C.limiteIso||"")}" min="${esc(C.today||"")}"></label>
+    <label>Date de livraison souhaitée<input type="date" id="og-liv" value="${esc(C.livraisonIso||"")}"></label>
+    <label>Lieu de livraison / retrait<input id="og-lieu" value="${esc(C.lieu||"")}" placeholder="Ex. cour de l’école"></label>
+    <label>Créneau de retrait<input id="og-cre" value="${esc(og.creneau||"")}" placeholder="Ex. vendredi 16 h 30 – 18 h"></label>
+    <label>Contact sur place (affiché aux acheteurs)<input id="og-con" value="${esc(og.contact||"")}" placeholder="Ex. Marie, 06 12 34 56 78"></label>
+    <label>Modalités de paiement<input id="og-pai" value="${esc(og.paiement||"")}" placeholder="Ex. chèque à l’ordre de l’APE ou espèces"></label>
+    <label class="full">Message d’accueil sur la page de commande<textarea id="og-msg" rows="3" placeholder="Ex. Vente au profit du voyage des CM2. Merci !">${esc(og.message||"")}</textarea></label>
+    ${prixHtml}
+   </div>
+   <p class="meta" id="og-hint"></p>
+   <p class="warn" id="og-err" hidden></p>
+   <div class="btns"><button class="btn main" id="og-save">Enregistrer</button>${C.ouvert?`<button class="btn" id="og-close">Fermer la vente maintenant</button>`:""}</div>`;
+  const kp=main.querySelector(".kpis"); (kp||main.firstElementChild).after(sec);
+  const lim=sec.querySelector("#og-lim"), liv=sec.querySelector("#og-liv"), hint=sec.querySelector("#og-hint"), err=sec.querySelector("#og-err");
+  const upd=()=>{ const m=livMin(lim.value); liv.min=m; hint.textContent=m?`Livraison possible à partir du ${fr(m)} (4 jours ouvrés après la date limite). Toute nouvelle date de livraison est confirmée par la brasserie.`:""; };
+  lim.addEventListener("change",upd); upd();
+  sec.querySelector("#og-save").onclick=async e=>{ const b=e.target; err.hidden=true;
+    if(!lim.value){ err.textContent="Indiquez la date limite de commande."; err.hidden=false; return; }
+    if(liv.value && liv.value<liv.min){ err.textContent=`La livraison doit être au plus tôt le ${fr(liv.min)}.`; err.hidden=false; return; }
+    const prix={}; sec.querySelectorAll(".pv").forEach(i=>{ const p=D.prix[+i.dataset.i]; (prix[p.id]=prix[p.id]||{})[p.k]=i.value.replace(",","."); });
+    b.disabled=true; b.textContent="Enregistrement…";
+    try{ const r=await post("save",{data:{limite:lim.value,livraison:liv.value,lieu:sec.querySelector("#og-lieu").value,creneau:sec.querySelector("#og-cre").value,contact:sec.querySelector("#og-con").value,paiement:sec.querySelector("#og-pai").value,message:sec.querySelector("#og-msg").value,prix}});
+      if(r&&r.ok){ startSuivi(r.data,"Réglages enregistrés."+(r.data.cse.livraisonIso&&!r.data.cse.dateOk?" La brasserie va confirmer la date de livraison.":"")); scrollTo(0,0); return; }
+      err.textContent=(r&&r.error)||"Enregistrement impossible."; err.hidden=false;
+    }catch(x){ err.textContent="Connexion impossible. Réessayez."; err.hidden=false; }
+    b.disabled=false; b.textContent="Enregistrer"; };
+  const cl=sec.querySelector("#og-close"); if(cl) cl.onclick=async ()=>{ if(cl.dataset.c!=="1"){ cl.dataset.c="1"; cl.textContent="Confirmer : plus aucune commande possible"; return; } cl.disabled=true;
+    const r=await post("fermer").catch(()=>null); if(r&&r.ok){ startSuivi(r.data,"Vente fermée : la page de commande n’accepte plus de commandes."); scrollTo(0,0); } else { err.textContent=(r&&r.error)||"Connexion impossible."; err.hidden=false; cl.disabled=false; } };
+  if(!D.orders.length) return;
+  const dist=document.createElement("section"); dist.className="card";
+  dist.innerHTML=`<h2>Distribution</h2><p class="meta">Cochez au fur et à mesure : c’est enregistré tout de suite.</p>
+    <div class="scroll"><table><thead><tr><th>Nom</th><th class="n">Montant</th><th class="n">Payé</th><th class="n">Remis</th></tr></thead><tbody>
+    ${D.orders.map(o=>`<tr><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><br><span class="det">${esc(o.detail)}</span></td><td class="n">${eur(o.montant)}</td>
+      <td class="n"><input type="checkbox" class="chk" data-n="${esc(o.n)}" data-champ="paye" ${o.paye?"checked":""} aria-label="Payé : ${esc(o.prenom)} ${esc(o.nom)}"></td>
+      <td class="n"><input type="checkbox" class="chk" data-n="${esc(o.n)}" data-champ="remis" ${o.remis?"checked":""} aria-label="Remis : ${esc(o.prenom)} ${esc(o.nom)}"></td></tr>`).join("")}</tbody></table></div>
+    <p class="meta" id="dist-sum"></p><p class="warn" id="dist-err" hidden></p>
+    <div class="btns"><button class="btn" id="dist-csv">Télécharger la liste (Excel)</button></div>`;
+  sec.after(dist);
+  const derr=dist.querySelector("#dist-err");
+  const sum=()=>{ const p=D.orders.filter(o=>o.paye), r=D.orders.filter(o=>o.remis); dist.querySelector("#dist-sum").textContent=`${p.length}/${D.orders.length} payées (${eur(p.reduce((a,o)=>a+o.montant,0))}) · ${r.length}/${D.orders.length} remises`; }; sum();
+  dist.querySelectorAll(".chk").forEach(c=>c.onchange=async()=>{ const o=D.orders.find(x=>String(x.n)===c.dataset.n); o[c.dataset.champ]=c.checked; sum(); derr.hidden=true;
+    const r=await post("pointer",{n:o.n,champ:c.dataset.champ,valeur:c.checked}).catch(()=>null);
+    if(!(r&&r.ok)){ c.checked=!c.checked; o[c.dataset.champ]=c.checked; sum(); derr.textContent="Connexion impossible : la case n’a pas été enregistrée."; derr.hidden=false; } });
+  dist.querySelector("#dist-csv").onclick=()=>{ const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+    const rows=[["N°","Prénom","Nom","Service","Téléphone","E-mail","Détail","Montant","Payé","Remis"]].concat(D.orders.map(o=>[o.n,o.prenom,o.nom,o.service,o.tel,o.email,o.detail,String(o.montant).replace(".",","),o.paye?"Oui":"",o.remis?"Oui":""]));
+    const blob=new Blob([String.fromCharCode(65279)+rows.map(r=>r.map(q).join(";")).join("\r\n")],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="distribution-"+(Q.get("cse")||"vente")+".csv"; document.body.appendChild(a); a.click(); a.remove(); };
 }
 
 if (Q.get("desinscription")) {
