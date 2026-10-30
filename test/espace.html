@@ -121,6 +121,8 @@ tr.off td:not(:first-child){opacity:.45}
 .preview{border:1px dashed var(--line);border-radius:10px;padding:14px;display:grid;gap:12px}
 .dialog-bg{position:fixed;inset:0;background:rgba(20,16,12,.45);display:grid;place-items:center;z-index:15;padding:16px}
 .dialog{background:var(--surface);border-radius:12px;padding:20px;max-width:420px;width:100%;display:grid;gap:12px}
+.r1 :is([data-new],[data-saveprix],[data-saveinfos],[data-close],[data-extend],[data-reopen],[data-confirmdate],[data-confirmalt],[data-create],[data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]),
+.r2 :is([data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]){display:none!important}
 @media (max-width:640px){h1{font-size:23px}nav.tabs{margin-left:0;width:100%}.top .wrap{gap:8px}}
 </style>
 </head><body>
@@ -131,19 +133,24 @@ tr.off td:not(:first-child){opacity:.45}
     <button type="button" data-nav="ventes">Ventes</button>
     <button type="button" data-nav="grilles">Grilles de prix</button>
     <button type="button" data-nav="catalogue">Catalogue</button>
+    <button type="button" data-nav="acces" id="navAcces" hidden>Accès</button>
   </nav>
+  <div id="who" class="sub" style="width:100%;text-align:right"></div>
 </div></header>
 <main class="wrap" id="app"><p class="muted">Chargement…</p></main>
 <div id="toastHost"></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const API = "https://script.google.com/macros/s/AKfycbxUl_7wwTnrGuGumvA2O6aTi0VBv19FaOEdy6ddojMo7eSRgPd-XdzV0oYLAuAYNbU/exec";
 const TEST = true;
 
-let KEY = "";
-try { KEY = localStorage.getItem("bs_espace_k") || ""; } catch (e) {}
-const hk = (location.hash.match(/k=([A-Za-z0-9]+)/) || [])[1];
-if (hk) { KEY = hk; try { localStorage.setItem("bs_espace_k", hk); } catch (e) {} history.replaceState(null, "", location.pathname); }
+const GCID = "63899726169-e4dgm80hqqk5dv39ei0l2ribeao489qm.apps.googleusercontent.com";
+let IDT = "", IDT_EXP = 0;
+try { const t = JSON.parse(localStorage.getItem("bs_idt") || "null"); if (t && t.exp > Date.now() / 1000 + 120) { IDT = t.tok; IDT_EXP = t.exp; } } catch (e) {}
+try { localStorage.removeItem("bs_espace_k"); } catch (e) {}
+if (location.hash) history.replaceState(null, "", location.pathname);
+let KEY = IDT;
 if (TEST) document.getElementById("testBanner").hidden = false;
 const BASE = new URL("./", location.href).href;
 
@@ -161,9 +168,10 @@ function toast(t){ const h=$("#toastHost"); h.innerHTML=`<div class="toast" role
 function copy(t){ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Lien copié")).catch(()=>toast("Copie impossible : sélectionne le lien à la main")); }
 
 async function api(op, data){
-  const r = await fetch(API, {method:"POST", credentials:"omit", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(Object.assign({action:"admin", k:KEY, op}, data||{}))});
+  if (!IDT || IDT_EXP < Date.now() / 1000 + 60) { needLogin("Ta session a expiré : reconnecte-toi."); throw new Error("Session expirée"); }
+  const r = await fetch(API, {method:"POST", credentials:"omit", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(Object.assign({action:"admin", idt:IDT, op}, data||{}))});
   const j = await r.json();
-  if (!j.ok) { if (j.auth) { try { localStorage.removeItem("bs_espace_k"); } catch (e) {} KEY=""; S.view="login"; render(); } throw new Error(j.error || "Erreur"); }
+  if (!j.ok) { if (j.auth) needLogin(j.error); throw new Error(j.error || "Erreur"); }
   return j;
 }
 let busy = false;
@@ -186,7 +194,32 @@ const S = {view: KEY ? "ventes" : "login", cur:null, tab:"apercu", exp:null, dra
   rule:{eur:{c33:1,c75:2,s33:1,s75:2,so:.8,bx:4}, pct:{c33:50,c75:40,s33:40,s75:40,so:35,bx:20}}, catEdit:null, newProd:null};
 function go(view, extra){ Object.assign(S, {view}, extra||{}); render(); window.scrollTo({top:0}); }
 
-function vLogin(){
+const ROLE_LAB={admin:"Admin",gestion:"Gestion",commercial:"Commercial",lecture:"Lecture"};
+function needLogin(msg){ IDT=""; KEY=""; IDT_EXP=0; try{ localStorage.removeItem("bs_idt"); }catch(e){} S.authMsg=msg||""; S.view="login"; render(); }
+function onCred(r){ try{ const p=JSON.parse(atob(r.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))); IDT=r.credential; IDT_EXP=p.exp; KEY=IDT; try{ localStorage.setItem("bs_idt",JSON.stringify({tok:IDT,exp:IDT_EXP})); }catch(e){} S.authMsg=""; S.view="ventes"; D=null; render(); run("",async()=>{ await load(); render(); }); }catch(e){ S.authMsg="Connexion impossible, réessaie."; render(); } }
+function gisButton(){ const el=document.getElementById("gbtn"); if(!el) return; if(!window.google||!google.accounts||!google.accounts.id){ setTimeout(gisButton,300); return; }
+  google.accounts.id.initialize({client_id:GCID,callback:onCred,auto_select:!S.authMsg,cancel_on_tap_outside:false});
+  google.accounts.id.renderButton(el,{theme:"outline",size:"large",text:"signin_with",shape:"pill",locale:"fr"}); if(!S.authMsg) google.accounts.id.prompt(); }
+function logout(){ try{ google.accounts.id.disableAutoSelect(); }catch(e){} needLogin("Tu es déconnecté."); D=null; }
+function vAcces(){ const A=S.acces;
+  return `<div class="head"><div><h1>Accès</h1><p class="muted">Les comptes Google autorisés à ouvrir l’Espace brasserie.</p></div></div>
+  <section class="card"><h2>Ajouter une personne</h2><div class="grid2"><div class="field"><label for="ac-email">Adresse Google (Gmail ou professionnelle)</label><input id="ac-email" type="email" placeholder="prenom.nom@gmail.com"></div>
+  <div class="field"><label for="ac-role">Niveau d’accès</label><select id="ac-role"><option value="commercial">Commercial · créer et suivre des ventes</option><option value="gestion">Gestion · tout sauf les accès</option><option value="lecture">Lecture · consulter seulement</option><option value="admin">Admin · tout, y compris les accès</option></select></div></div>
+  <div class="bar"><button class="btn primary" type="button" data-acadd>Donner l’accès</button></div>
+  <p class="note">Tant que la connexion Google est en mode test, la personne doit aussi être ajoutée comme « utilisateur test » dans la console Google (Google Auth Platform › Audience).</p></section>
+  <section class="card"><div class="scroll"><table><thead><tr><th>Compte</th><th>Accès</th><th>Ajouté</th><th></th></tr></thead><tbody>
+  ${A?A.map(x=>{const main=x.email==="contact@bbvpro.fr"; return `<tr><td><b>${esc(x.email)}</b></td><td>${main?ROLE_LAB[x.role]||x.role:`<select data-acrole="${esc(x.email)}" aria-label="Niveau d’accès de ${esc(x.email)}">${Object.entries(ROLE_LAB).map(([k,l])=>`<option value="${k}" ${x.role===k?"selected":""}>${l}</option>`).join("")}</select>`}</td><td class="sub">${esc(x.le)} ${x.par?"· par "+esc(x.par):""}</td><td class="num">${main?'<span class="tag">Administrateur principal</span>':`<button class="btn ghost small" type="button" data-acdel="${esc(x.email)}">Retirer</button>`}</td></tr>`;}).join(""):`<tr><td colspan="4" class="muted">Chargement…</td></tr>`}
+  </tbody></table></div></section>
+  <section class="card"><h2>Ce que permet chaque niveau</h2><div class="scroll"><table><thead><tr><th></th><th>Lecture</th><th>Commercial</th><th>Gestion</th><th>Admin</th></tr></thead><tbody>
+  <tr><td>Voir les ventes, commandes, récaps et exports</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+  <tr><td>Créer et modifier des ventes, confirmer les dates</td><td>–</td><td>✓</td><td>✓</td><td>✓</td></tr>
+  <tr><td>Mettre un prix brasserie sous le prix du catalogue</td><td>–</td><td>–</td><td>✓</td><td>✓</td></tr>
+  <tr><td>Grilles de prix et catalogue</td><td>–</td><td>–</td><td>✓</td><td>✓</td></tr>
+  <tr><td>Gérer les accès</td><td>–</td><td>–</td><td>–</td><td>✓</td></tr></tbody></table></div></section>`; }
+function vLogin(){ return `<div class="head"><div><h1>Espace brasserie</h1><p class="muted">Connecte-toi avec ton compte Google pour accéder aux ventes.</p></div></div>
+  <section class="card"><div id="gbtn" style="min-height:44px"></div>${S.authMsg?`<p style="margin:0;color:var(--warn);font-weight:600">${esc(S.authMsg)}</p>`:""}
+  <p class="note">Seuls les comptes Google ajoutés par l’administrateur peuvent entrer.</p></section>`; }
+function vLoginOld(){
   return `<div class="head"><div><h1>Espace brasserie</h1><p class="muted">Pour entrer, colle ici ton lien d’accès personnel (il se termine par <code>#k=…</code>).</p></div></div>
   <section class="card"><div class="field"><label for="lk">Lien d’accès</label><input id="lk" placeholder="https://…/espace.html#k=…"></div>
   <div class="bar"><button class="btn primary" type="button" data-login>Entrer</button></div>
@@ -419,7 +452,11 @@ function render(){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",(b.dataset.nav===S.view||((S.view==="vente"||S.view==="nouvelle")&&b.dataset.nav==="ventes"))?"page":"false"));
   const a=$("#app");
   if(S.view!=="login" && !D){ a.innerHTML=`<p class="muted">Chargement…</p>`; return; }
-  a.innerHTML = S.view==="login"?vLogin():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():vCatalogue();
+  const role=D&&D.me?D.me.role:""; document.body.className="r"+({admin:4,gestion:3,commercial:2,lecture:1}[role]||0);
+  const na=document.getElementById("navAcces"); if(na) na.hidden=role!=="admin";
+  const who=document.getElementById("who"); if(who) who.innerHTML=S.view!=="login"&&D&&D.me?`${esc(D.me.email)} · ${ROLE_LAB[role]||role} · <button class="back" type="button" data-logout>Se déconnecter</button>`:"";
+  setTimeout(()=>{ if(S.view==="login") gisButton(); },0);
+  a.innerHTML = S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():vCatalogue();
 }
 function scopeObj(scope){ return scope==="draft"?S.draft:scope==="vente"?S.edit:S.gedit; }
 async function load(){ const j=await api("init"); D=j.data; setCat(D.catalogue); }
@@ -433,6 +470,10 @@ function cfgOf(d){ return {resale:d.resale,grille:d.grille||"",formats:d.formats
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,[data-open]"); if(!t) return; const d=t.dataset;
+  if(d.logout!==undefined){ logout(); return; }
+  if(d.nav==="acces"){ go("acces"); S.acces=null; render(); run("",async()=>{ const r=await api("acces"); S.acces=r.acces; render(); }); return; }
+  if(d.acadd!==undefined){ const em=$("#ac-email").value.trim(), ro=$("#ac-role").value; if(!em){ toast("Indique l’adresse Google"); return; } run("",async()=>{ const r=await api("saveAcces",{email:em,role:ro}); S.acces=r.acces; render(); toast("Accès donné à "+em); }); return; }
+  if(d.acdel){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const r=await api("saveAcces",{email:d.acdel,role:""}); S.acces=r.acces; render(); toast("Accès retiré"); }); return; }
   if(d.login!==undefined){ const m=($("#lk").value.match(/k=([A-Za-z0-9]+)/)||[])[1]; if(!m){ toast("Ce lien ne contient pas de clé (#k=…)"); return; } KEY=m; try{localStorage.setItem("bs_espace_k",m);}catch(err){} S.view="ventes"; run("",async()=>{await load(); render();}); return; }
   if(d.nav){ go(d.nav,{gedit:null,newProd:null,catEdit:d.nav==="catalogue"?Object.fromEntries(P.map(p=>[p.id,{dispo:p.dispo,p33:p.p33,p75:p.p75,p:p.p}])):S.catEdit}); return; }
   if(d.refresh!==undefined){ run("",async()=>{await load(); render(); toast("À jour");}); return; }
@@ -476,6 +517,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr.row")){ e.preventDefault(); run("",()=>openVente(e.target.dataset.open)); } });
 document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset;
+  if(d.acrole){ run("",async()=>{ const r=await api("saveAcces",{email:d.acrole,role:el.value}); S.acces=r.acces; render(); toast("Accès modifié"); }); return; }
   if(d.on){ scopeObj(d.scope).prix[d.on].on=el.checked; render(); return; }
   if(d.fmt){ const f=scopeObj(d.scope).formats; f[d.fmt]=el.checked; if(!Object.values(f).some(Boolean)){ f[d.fmt]=true; toast("Garde au moins un format"); } render(); return; }
   if(d.pid){ scopeObj(d.scope).prix[d.pid][d.k]=num(el.value); return; }
@@ -493,6 +535,7 @@ document.addEventListener("input",e=>{ const el=e.target;
   if(el.id==="saveName"&&S.draft){ S.draft.saveName=el.value; S.draft.saveAs=!!el.value.trim(); const c=$("#saveAs"); if(c) c.checked=S.draft.saveAs; } });
 
 render();
+if(S.view==="login") gisButton();
 if(KEY) run("",async()=>{ await load(); render(); });
 </script>
 </body></html>
