@@ -198,8 +198,10 @@ const ROLE_LAB={admin:"Admin",gestion:"Gestion",commercial:"Commercial",lecture:
 function needLogin(msg){ IDT=""; KEY=""; IDT_EXP=0; try{ localStorage.removeItem("bs_idt"); }catch(e){} S.authMsg=msg||""; S.view="login"; render(); }
 function onCred(r){ try{ const p=JSON.parse(atob(r.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))); IDT=r.credential; IDT_EXP=p.exp; KEY=IDT; try{ localStorage.setItem("bs_idt",JSON.stringify({tok:IDT,exp:IDT_EXP})); }catch(e){} S.authMsg=""; S.view="ventes"; D=null; render(); run("",async()=>{ await load(); render(); }); }catch(e){ S.authMsg="Connexion impossible, réessaie."; render(); } }
 function gisButton(){ const el=document.getElementById("gbtn"); if(!el) return; if(!window.google||!google.accounts||!google.accounts.id){ setTimeout(gisButton,300); return; }
-  google.accounts.id.initialize({client_id:GCID,callback:onCred,auto_select:!S.authMsg,cancel_on_tap_outside:false});
-  google.accounts.id.renderButton(el,{theme:"outline",size:"large",text:"signin_with",shape:"pill",locale:"fr"}); if(!S.authMsg) google.accounts.id.prompt(); }
+  if(el.dataset.done) return; el.dataset.done="1";
+  if(!window.__gisInit){ window.__gisInit=1; google.accounts.id.initialize({client_id:GCID,callback:onCred,auto_select:!S.authMsg,cancel_on_tap_outside:false}); }
+  google.accounts.id.renderButton(el,{theme:"outline",size:"large",text:"signin_with",shape:"pill",locale:"fr"});
+  if(!S.authMsg && !window.__gisPrompted){ window.__gisPrompted=1; try{ google.accounts.id.prompt(); }catch(e){} } }
 function logout(){ try{ google.accounts.id.disableAutoSelect(); }catch(e){} needLogin("Tu es déconnecté."); D=null; }
 function vAcces(){ const A=S.acces;
   return `<div class="head"><div><h1>Accès</h1><p class="muted">Les comptes Google autorisés à ouvrir l’Espace brasserie.</p></div></div>
@@ -535,7 +537,6 @@ document.addEventListener("input",e=>{ const el=e.target;
   if(el.id==="saveName"&&S.draft){ S.draft.saveName=el.value; S.draft.saveAs=!!el.value.trim(); const c=$("#saveAs"); if(c) c.checked=S.draft.saveAs; } });
 
 render();
-if(S.view==="login") gisButton();
 if(KEY) run("",async()=>{ await load(); render(); });
 </script>
 </body></html>
