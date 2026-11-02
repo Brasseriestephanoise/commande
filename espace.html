@@ -192,7 +192,7 @@ let D = null;            // {ventes, grilles, catalogue, url}
 let P = [], byId = {};   // catalogue
 const CATS = [["classique","Bières classiques"],["speciale","Bières spéciales"],["soft","Softs"],["box","Coffrets"]];
 const FALL = {b33:true,b75:true,soft:true,box:true};
-const FMTS = [["b33","Carton bière 12 × 33 cl"],["b75","Carton bière 6 × 75 cl"],["soft","Carton soft 12 × 33 cl"],["box","Coffrets"]];
+const FMTS = [["b33","Bières 33 cl (cartons de 12)"],["b75","Bières 75 cl (cartons de 6)"],["soft","Softs (dans les cartons de 33 cl)"],["box","Coffrets"]];
 function setCat(c){ P = c; byId = Object.fromEntries(P.map(p=>[p.id,p])); }
 function basePrix(){ const o={}; P.forEach(p=>{ o[p.id] = p.cat==="box" ? {on:p.dispo,b:p.p} : {on:p.dispo,b33:p.p33,b75:p.cat==="soft"?null:p.p75}; }); return o; }
 function grillesAll(){ return [{id:"cse",nom:"CSE classique",desc:"Les prix de base du catalogue. Grille par défaut.",resale:false,locked:true,formats:clone(FALL),prix:basePrix()}].concat(D.grilles); }
@@ -447,7 +447,7 @@ function priceTable(prix,resale,scope,fm){
   const catOn=cat=>cat==="soft"?fm.soft:cat==="box"?fm.box:(fm.b33||fm.b75);
   const head=`<tr><th>Produit</th><th>Proposé</th><th class="num">Prix brasserie 33 cl</th><th class="num">Prix brasserie 75 cl</th>${resale?'<th class="num">Prix de vente 33 cl</th><th class="num">Prix de vente 75 cl</th>':""}</tr>`;
   const body=CATS.map(([cat,lab])=>{const ps=P.filter(p=>p.cat===cat); if(!ps.length) return "";
-    return `<tr class="group"><td colspan="${resale?6:4}">${lab}${cat==="soft"?" · cartons de 12 × 33 cl à part":cat==="box"?" · prix au coffret":""}${catOn(cat)?"":" · format non proposé"}</td></tr>`+ps.map(p=>{const x=prix[p.id], act=x.on&&catOn(cat);
+    return `<tr class="group"><td colspan="${resale?6:4}">${lab}${cat==="soft"?" · dans les cartons de 33 cl, avec les bières":cat==="box"?" · prix au coffret":""}${catOn(cat)?"":" · format non proposé"}</td></tr>`+ps.map(p=>{const x=prix[p.id], act=x.on&&catOn(cat);
     const inp=(k,ok)=>!ok?`<span class="muted">–</span>`:`<input class="price" inputmode="decimal" data-scope="${scope}" data-pid="${p.id}" data-k="${k}" value="${fx(x[k])}" ${act?"":"disabled"} aria-label="${esc(p.n)} ${k}">`;
     const box=cat==="box", ok33=box||cat==="soft"||fm.b33, ok75=!box&&cat!=="soft"&&fm.b75;
     return `<tr class="${act?"":"off"}"><td><span class="dot" style="background:${p.c}"></span><b>${esc(p.n)}</b>${p.dispo?"":' <span class="tag">indisponible</span>'}<div class="sub" style="margin-left:20px">${esc(p.s)}</div></td>
@@ -531,7 +531,7 @@ function vCatalogue(){
       <td class="num"><input class="price" data-cid="${p.id}" data-ck="${cat==="box"?"p":"p33"}" value="${fx(cat==="box"?x.p:x.p33)}"></td>
       <td class="num">${cat==="box"||cat==="soft"?"":`<input class="price" data-cid="${p.id}" data-ck="p75" value="${fx(x.p75)}">`}</td>
       ${cat==="box"?"":`<td><label class="btn ghost small" style="cursor:pointer">${x.img?"✓ Nouvelle image":"Changer l’image"}<input type="file" accept="image/png,image/jpeg,image/webp" data-cimg="${p.id}" hidden></label></td>`}</tr>${S.fiche===p.id?ficheHtml(p,x,5):""}`;}).join("")}
-  </tbody></table></div>${cat==="soft"?'<p class="note">Les softs se commandent en cartons de 12 × 33 cl à part, sans mélange avec les bières.</p>':""}</section>`;}).join("")}`;
+  </tbody></table></div>${cat==="soft"?'<p class="note">Les softs se mélangent avec les bières 33 cl dans les mêmes cartons de 12.</p>':""}</section>`;}).join("")}`;
 }
 function newProdHtml(){ const n=S.newProd;
   return `<section class="card"><h2>Nouveau produit</h2><div class="grid2">
