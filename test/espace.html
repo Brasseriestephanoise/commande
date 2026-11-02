@@ -127,8 +127,8 @@ body.loading::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z
 .preview{border:1px dashed var(--line);border-radius:10px;padding:14px;display:grid;gap:12px}
 .dialog-bg{position:fixed;inset:0;background:rgba(20,16,12,.45);display:grid;place-items:center;z-index:15;padding:16px}
 .dialog{background:var(--surface);border-radius:12px;padding:20px;max-width:420px;width:100%;display:grid;gap:12px}
-.r1 :is([data-new],[data-saveprix],[data-saveinfos],[data-close],[data-extend],[data-reopen],[data-confirmdate],[data-confirmalt],[data-create],[data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]),
-.r2 :is([data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]){display:none!important}
+.r1 :is([data-rsave],[data-new],[data-saveprix],[data-saveinfos],[data-close],[data-extend],[data-reopen],[data-confirmdate],[data-confirmalt],[data-create],[data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]),
+.r2 :is([data-rsave],[data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]){display:none!important}
 @media (max-width:640px){h1{font-size:23px}nav.tabs{margin-left:0;width:100%}.top .wrap{gap:8px}}
 </style>
 </head><body>
@@ -455,7 +455,8 @@ function priceTable(prix,resale,scope,fm){
     <div class="bar"><span style="min-width:120px">Bières spéciales</span> + ${R("s33")} ${U} la 33 cl · + ${R("s75")} ${U} la 75 cl</div>
     <div class="bar"><span style="min-width:120px">Softs</span> + ${R("so")} ${U} la 33 cl</div>
     <div class="bar"><span style="min-width:120px">Coffrets</span> + ${R("bx")} ${U} le coffret</div>
-    <div><button class="btn small primary" type="button" data-rule="${scope}">Appliquer</button></div></div>`:"";
+    <div class="bar"><button class="btn small primary" type="button" data-rule="${scope}">Appliquer</button><button class="btn small" type="button" data-rdef="${scope}">Valeurs par défaut</button><button class="btn small ghost" type="button" data-rsave>Enregistrer ces valeurs comme défaut</button></div>
+    <p class="note">« Valeurs par défaut » remet les majorations (et le choix € ou %) que tu as enregistrées comme défaut.</p></div>`:"";
   return fmtsHtml(fm,scope)+tools+`<div class="scroll"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
 function applyRule(prix,r,mode){ const add=(b,a)=>b==null?null:(mode==="pct"?Math.round(b*(1+a/100)*10)/10:+(b+a).toFixed(2));
@@ -553,7 +554,10 @@ function render(){
   a.innerHTML = S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():vCatalogue();
 }
 function scopeObj(scope){ return scope==="draft"?S.draft:scope==="vente"?S.edit:S.gedit; }
-async function load(){ const j=await api("init"); D=j.data; setCat(D.catalogue); setTimeout(prefetch,300); }
+const RULE0={mode:"eur",eur:{c33:1,c75:2,s33:1,s75:2,so:.8,bx:4},pct:{c33:50,c75:40,s33:40,s75:40,so:35,bx:20}};
+function ruleDef(){ const d=(D&&D.ruleDef)||{}; return {mode:d.mode||RULE0.mode, eur:Object.assign({},RULE0.eur,d.eur||{}), pct:Object.assign({},RULE0.pct,d.pct||{})}; }
+function resetRule(){ const d=ruleDef(); S.rmode=d.mode; S.rule={eur:d.eur,pct:d.pct}; }
+async function load(){ const j=await api("init"); D=j.data; setCat(D.catalogue); resetRule(); setTimeout(prefetch,300); }
 async function prefetch(){ const vs=(D.ventes||[]).filter(v=>v.ouvert).slice(0,6); for(const v of vs){ if(VC[v.code]) continue; try{ const j=await api("vente",{code:v.code}); VC[v.code]=j.data; }catch(e){ return; } } }
 async function openVente(code){ const tab=S.view==="vente"&&S.cur&&S.cur.vente.code===code?S.tab:"apercu";
   if(VC[code]){ setCur(VC[code]); go("vente",{tab,exp:null}); later(async()=>{ const j=await api("vente",{code}); const same=JSON.stringify(j.data)===JSON.stringify(VC[code]); VC[code]=j.data; if(!same&&S.view==="vente"&&S.cur.vente.code===code&&!S.typed){ setCur(j.data); render(); } }); return; }
@@ -592,6 +596,8 @@ document.addEventListener("click",e=>{
   if(d.ctype){ const o=scopeObj(d.scope); o.resale=d.ctype==="resale"; if(o.resale&&!hasV(o.prix)) applyRule(o.prix,S.rule.eur,"eur"); render(); return; }
   if(d.pick!==undefined){ const g=grillesAll().find(x=>x.id===d.pick); Object.assign(S.draft,{grille:g.id,prix:fillPrix(g.prix),formats:clone(g.formats),resale:g.resale}); render(); return; }
   if(d.rmode){ S.rmode=d.rmode; render(); return; }
+  if(d.rdef!==undefined){ resetRule(); render(); toast("Valeurs par défaut remises : clique sur Appliquer pour recalculer"); return; }
+  if(d.rsave!==undefined){ const def={mode:S.rmode,eur:clone(S.rule.eur),pct:clone(S.rule.pct)}, old=D.ruleDef; D.ruleDef=def; toast("Nouvelles valeurs par défaut enregistrées"); later(async()=>{ await api("saveRule",{rule:def}); }, ()=>{ D.ruleDef=old; }); return; }
   if(d.rule){ applyRule(scopeObj(d.rule).prix,S.rule[S.rmode],S.rmode); render(); toast("Prix de vente recalculés"); return; }
   if(d.create!==undefined){ const x=S.draft; if(!x.nom.trim()){ toast("Indique au moins le nom de la vente"); $("#d-nom").focus(); return; }
     run("",async()=>{ let gid=x.grille;
