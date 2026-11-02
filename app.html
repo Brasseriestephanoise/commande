@@ -549,7 +549,7 @@ function recapHtml(){
   ${nb?sec(`Coffrets · ${nb}`,S.boxes.map((x,i)=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${esc(boxLabel(x,i))}<br><small>${x.mode==="assort"?"Assortiment de la brasserie":"Sur mesure : "+esc(pickText(x))}</small></span><span>${eur(BT(x.t).p)}</span></div>`).join(""),"box"):""}
   <div class="tot"><span>Total</span><span>${eur(total())}</span></div>
   ${nb?`<p class="note">Dont ${eur(boxSaving())} d’économie sur les coffrets.</p>`:""}
-  <p class="note">Règlement à la livraison, auprès de ${QUI}. ${CSE.retrait?"Retrait ou livraison : "+esc(CSE.retrait)+(CSE.lieu?", "+esc(CSE.lieu):"")+".":"Retrait ou livraison : date communiquée par "+QUI+"."}</p>
+  <p class="note">${CSE.ha?"Règlement en ligne sur HelloAsso, juste après la validation.":`Règlement à la livraison, auprès de ${QUI}.`} ${CSE.retrait?"Retrait ou livraison : "+esc(CSE.retrait)+(CSE.lieu?", "+esc(CSE.lieu):"")+".":"Retrait ou livraison : date communiquée par "+QUI+"."}</p>
   ${CSE.creneau||CSE.paiement?`<p class="note">${CSE.creneau?"Créneau : "+esc(CSE.creneau)+". ":""}${CSE.paiement?"Paiement : "+esc(CSE.paiement)+".":""}</p>`:""}
   ${sendError?`<p class="err-box" role="alert">${esc(sendError)}</p>`:""}
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
@@ -557,10 +557,25 @@ function recapHtml(){
 function doneHtml(){
   return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${result?result.numero:""} enregistrée</span>
   <h1>Merci ${esc(S.person.prenom)} !</h1>
-  <p class="lead">Votre commande de ${eur(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. Vous la réglerez au moment de la livraison, auprès de ${QUI}.</p>
+  <p class="lead">Votre commande de ${eur(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. ${CSE.ha?"Il ne vous reste plus qu’à la régler en ligne.":`Vous la réglerez au moment de la livraison, auprès de ${QUI}.`}</p>
+  ${CSE.ha?`<button class="cta" data-hapay="${result?result.numero:""}">Payer ${eur(result?result.total:total())} sur HelloAsso</button><p class="note">Paiement sécurisé sur la page HelloAsso de l’organisateur.</p>`:""}
   <p class="note">Un oubli ou une erreur ? Répondez simplement à l’e-mail de confirmation.</p>
   <button class="cta" data-restart>Passer une autre commande</button></section>`;
 }
+
+/* Paiement HelloAsso */
+function haPost(o){ return fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({cse:Q.get("cse")},o))}).then(r=>r.json()); }
+function haGo(n){ const b=document.querySelector("[data-hapay]"); if(b){ b.disabled=true; b.textContent="Redirection vers HelloAsso…"; }
+  haPost({action:"haPay",n,page:location.origin+location.pathname}).then(r=>{ if(r.ok&&r.url) location.href=r.url; else if(r.ok&&r.paid) haShow(n,true); else haShow(n,false,r.error); }).catch(()=>haShow(n,false,"Connexion impossible pour le moment. Réessayez dans quelques instants.")); }
+function haShow(n,paid,msg){ const bar=$("#bar"); if(bar) bar.hidden=true; const nn=esc(String(n||""));
+  $("#app").innerHTML=`${topBar()}<section class="done"><span class="stamp">Commande n°${nn}</span>
+  <h1>${paid?"Paiement reçu, merci !":"Paiement non finalisé"}</h1>
+  <p class="lead">${paid?`Votre commande n°${nn} est réglée. HelloAsso vous envoie aussi un reçu par e-mail.`:esc(msg||"Le paiement n’a pas abouti. Votre commande est bien enregistrée : vous pouvez réessayer de la régler en ligne.")}</p>
+  ${paid?"":`<button class="cta" data-hapay="${nn}">Payer ma commande sur HelloAsso</button>`}
+  <p class="note"><a href="?cse=${encodeURIComponent(Q.get("cse")||"")}">Revenir à la page de commande</a></p></section>`; }
+function haReturn(){ const n=Q.get("ha"); const bar=$("#bar"); if(bar) bar.hidden=true; $("#app").innerHTML=`${topBar()}<section class="done"><h1>Vérification du paiement…</h1></section>`;
+  haPost({action:"haCheck",n}).then(r=>haShow(n,!!(r.ok&&r.paid),r.ok?"":r.error)).catch(()=>haShow(n,false,"Vérification impossible pour le moment. Rechargez la page dans quelques instants.")); }
+window.haReturn=haReturn;
 
 function renderBar(){
   const bar=$("#bar"), inn=$("#barIn");
@@ -637,6 +652,7 @@ document.addEventListener("click",e=>{
     go("bieres"); return;
   }
   if(d.submit!==undefined){ submit(); return; }
+  if(d.hapay!==undefined){ haGo(d.hapay||(result&&result.numero)); return; }
   if(d.restart!==undefined){ result=null; S.q={"33":{},"75":{},"soft":{}}; S.boxes=[]; S.compose=null; S.person={nom:"",prenom:"",service:"",tel:"",email:"",news:false}; S.tab=(TABS()[0]||["33"])[0]; go("home"); return; }
 });
 document.addEventListener("keydown",e=>{
@@ -756,6 +772,30 @@ function suiviExtras(D){
     b.disabled=false; b.textContent="Enregistrer"; };
   const cl=sec.querySelector("#og-close"); if(cl) cl.onclick=async ()=>{ if(cl.dataset.c!=="1"){ cl.dataset.c="1"; cl.textContent="Confirmer : plus aucune commande possible"; return; } cl.disabled=true;
     const r=await post("fermer").catch(()=>null); if(r&&r.ok){ startSuivi(r.data,"Vente fermée : la page de commande n’accepte plus de commandes."); scrollTo(0,0); } else { err.textContent=(r&&r.error)||"Connexion impossible."; err.hidden=false; cl.disabled=false; } };
+  var haAnchor=sec; if((D.ha||{}).allow){ const h=D.ha||{}; const hs=document.createElement("section"); hs.className="card";
+    hs.innerHTML=`<h2>Paiement en ligne HelloAsso <span class="meta">(facultatif)</span></h2>
+    <p class="meta">Si votre association utilise HelloAsso, vos acheteurs peuvent régler leur commande en ligne, au montant exact, juste après l’avoir validée. L’argent arrive sur votre compte HelloAsso et la commande passe toute seule en « payé ». Votre clé reste sur notre serveur : elle n’est jamais affichée, ni aux acheteurs ni à la brasserie.</p>
+    ${h.on?`<p class="st ok">Paiement HelloAsso activé${h.slug?" ("+esc(h.slug)+")":""}${h.env==="prod"?"":" · compte de test"}.</p>`:""}
+    <div style="display:flex;flex-direction:column;gap:10px;margin:12px 0">
+     <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer"><input type="checkbox" id="ha-on" style="width:18px;height:18px;margin:0;flex:none" ${h.on?"checked":""}> Activer le paiement en ligne HelloAsso</label>
+     <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" id="ha-test" style="width:18px;height:18px;margin:0;flex:none" ${h.on&&h.env!=="prod"?"checked":""}> Compte HelloAsso de test (sandbox)</label>
+    </div>
+    <div class="og">
+     <label>Adresse de votre page HelloAsso<input id="ha-slug" value="${esc(h.slug||"")}" placeholder="Ex. helloasso.com/associations/mon-asso"></label>
+     <label>Client ID<input id="ha-id" autocomplete="off" placeholder="${h.hasKey?"Enregistré (…"+esc(h.idFin||"")+") : laisser vide pour garder":"À coller ici"}"></label>
+     <label>Client Secret<input id="ha-secret" type="password" autocomplete="new-password" placeholder="${h.hasKey?"Enregistré : laisser vide pour garder":"À coller ici"}"></label>
+    </div>
+    <p class="meta">Votre clé se trouve dans votre espace HelloAsso : <b>Mon Compte › Intégration et API</b>.</p>
+    <p class="warn" id="ha-err" hidden></p>
+    <div class="btns"><button class="btn main" id="ha-save">Enregistrer et tester</button></div>`;
+    sec.after(hs);
+    hs.querySelector("#ha-save").onclick=async e=>{ const b=e.target, er=hs.querySelector("#ha-err"), g=s=>hs.querySelector(s); er.hidden=true; b.disabled=true; b.textContent="Vérification auprès de HelloAsso…";
+      try{ const r=await post("haSave",{ha:{on:g("#ha-on").checked,env:g("#ha-test").checked?"sandbox":"prod",slug:g("#ha-slug").value.trim(),id:g("#ha-id").value.trim(),secret:g("#ha-secret").value.trim()}});
+        if(r&&r.ok){ startSuivi(r.data, r.ha&&r.ha.on?"Paiement HelloAsso activé"+(r.nom?" pour « "+r.nom+" »":"")+" : vos acheteurs pourront payer en ligne.":"Paiement HelloAsso désactivé."); scrollTo(0,0); return; }
+        er.textContent=(r&&r.error)||"Enregistrement impossible."; er.hidden=false;
+      }catch(x){ er.textContent="Connexion impossible. Réessayez."; er.hidden=false; }
+      b.disabled=false; b.textContent="Enregistrer et tester"; };
+    haAnchor=hs; }
   if(!D.orders.length) return;
   const dist=document.createElement("section"); dist.className="card";
   dist.innerHTML=`<h2>Distribution</h2><p class="meta">Cochez au fur et à mesure : c’est enregistré tout de suite.</p>
@@ -765,7 +805,7 @@ function suiviExtras(D){
       <td class="n"><input type="checkbox" class="chk" data-n="${esc(o.n)}" data-champ="remis" ${o.remis?"checked":""} aria-label="Remis : ${esc(o.prenom)} ${esc(o.nom)}"></td></tr>`).join("")}</tbody></table></div>
     <p class="meta" id="dist-sum"></p><p class="warn" id="dist-err" hidden></p>
     <div class="btns"><button class="btn" id="dist-csv">Télécharger la liste (Excel)</button></div>`;
-  sec.after(dist);
+  haAnchor.after(dist);
   const derr=dist.querySelector("#dist-err");
   const sum=()=>{ const p=D.orders.filter(o=>o.paye), r=D.orders.filter(o=>o.remis); dist.querySelector("#dist-sum").textContent=`${p.length}/${D.orders.length} payées (${eur(p.reduce((a,o)=>a+o.montant,0))}) · ${r.length}/${D.orders.length} remises`; }; sum();
   dist.querySelectorAll(".chk").forEach(c=>c.onchange=async()=>{ const o=D.orders.find(x=>String(x.n)===c.dataset.n); o[c.dataset.champ]=c.checked; sum(); derr.hidden=true;
@@ -783,7 +823,7 @@ if (Q.get("desinscription")) {
 } else if (Q.has("cle")) {
   (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"suivi", cse:Q.get("cse"), cle:Q.get("cle")})).then(r=> r.ok ? startSuivi(r.data) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
 } else {
-  (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"page", cse:Q.get("cse")})).then(r=> r.ok ? startOrder(r.data) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
+  (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"page", cse:Q.get("cse")})).then(r=> r.ok ? (startOrder(r.data), Q.has("ha")&&haReturn()) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
 }
 </script>
 </body></html>

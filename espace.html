@@ -263,6 +263,10 @@ function vVentes(){
 }
 function gName(v){ if(!v.configured||v.grille==="cse") return "CSE classique"; const g=D.grilles.find(x=>x.id===v.grille); return g?g.nom:(v.grille?"Grille supprimée":"Personnalisée"); }
 
+function haCard(){ const h=S.cur.ha||{};
+  return `<section class="card"><h2>Paiement en ligne HelloAsso</h2>
+    <label class="bar" style="font-size:14px"><input type="checkbox" data-haallow ${h.allow?"checked":""}> Proposer à l’organisateur de brancher son paiement HelloAsso</label>
+    <p class="note" style="margin:6px 0 0">${!h.allow?"L’organisateur ne voit pas l’option.":h.on?`Activé par l’organisateur${h.slug?" · "+esc(h.slug):""}${h.env==="prod"?"":" · compte de test"} : les acheteurs paient en ligne et les commandes se cochent « payé » toutes seules.`:"Option proposée : l’organisateur l’active lui-même depuis son lien de suivi, avec la clé API de son compte HelloAsso (Mon Compte › Intégration et API). La brasserie n’a jamais accès à cette clé."}</p></section>`; }
 function vVente(){
   const C = S.cur, v = C.vente, cf = C.config, st = status(v), t = totals();
   const tabs = [["apercu","Aperçu"],["infos","Infos"],["produits","Produits et prix"],["commandes","Commandes ("+C.orders.length+")"],["exports","Récaps"]];
@@ -285,7 +289,7 @@ function vVente(){
       <div><div class="sub">Formats</div>${FMTS.filter(([k])=>cf.formats[k]).map(([,l])=>l).join(", ")}</div>
     </div>${cf.configured?"":`<p class="note">Vente créée avant l’Espace brasserie : elle garde le fonctionnement d’origine (catalogue et prix de base, sans softs) tant que tu n’enregistres pas de changement.</p>`}</section>`;
   if (S.tab==="infos") body = `<section class="card"><h2>Infos de la vente</h2>${infoFields(S.edit, false)}
-      <div class="bar"><button class="btn primary" type="button" data-saveinfos>Enregistrer</button></div></section>`;
+      <div class="bar"><button class="btn primary" type="button" data-saveinfos>Enregistrer</button></div></section>${haCard()}`;
   if (S.tab==="produits") body = `<section class="card"><div class="head"><div><h2>Produits et prix de cette vente</h2><p class="note">Tes changements ici ne touchent que cette vente. Les commandes déjà passées gardent leur prix.</p></div>
       <button class="btn small" type="button" data-savegrid>Enregistrer comme grille…</button></div>
       <div class="bar"><span class="seg" role="group" aria-label="Type de vente"><button type="button" data-ctype="std" data-scope="vente" aria-pressed="${!S.edit.resale}">Standard</button><button type="button" data-ctype="resale" data-scope="vente" aria-pressed="${S.edit.resale}">Revente avec marge</button></span></div>
@@ -627,6 +631,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr.row")){ e.preventDefault(); run("",()=>openVente(e.target.dataset.open)); } });
 document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset; if(S.view==="vente") S.typed=true;
+  if(d.haallow!==undefined){ const allow=el.checked; run("",async()=>{ const j=await api("haAllow",{code:S.cur.vente.code,allow}); S.cur.ha=j.ha; render(); toast(allow?"Paiement HelloAsso proposé à l’organisateur":"Option HelloAsso retirée"); }); return; }
   if(d.acrole){ run("",async()=>{ const r=await api("saveAcces",{email:d.acrole,role:el.value}); S.acces=r.acces; render(); toast("Accès modifié"); }); return; }
   if(d.on){ scopeObj(d.scope).prix[d.on].on=el.checked; render(); return; }
   if(d.fmt){ const f=scopeObj(d.scope).formats; f[d.fmt]=el.checked; if(!Object.values(f).some(Boolean)){ f[d.fmt]=true; toast("Garde au moins un format"); } render(); return; }
