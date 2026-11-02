@@ -119,6 +119,9 @@ tr.off td:not(:first-child){opacity:.45}
 .gcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:8px;cursor:pointer;text-align:left}
 .gcard:hover{border-color:var(--accent)}
 .gcard.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+body.loading::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z-index:60;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:lbar 1s linear infinite}
+@keyframes lbar{from{background-position:-40% 0}to{background-position:140% 0}}
+@media (prefers-reduced-motion:reduce){body.loading::before{animation:none;background:var(--accent);opacity:.6}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
 .note{font-size:13px;color:var(--muted);margin:0}
 .preview{border:1px dashed var(--line);border-radius:10px;padding:14px;display:grid;gap:12px}
@@ -178,7 +181,12 @@ async function api(op, data){
   return j;
 }
 let busy = false;
-async function run(label, fn){ if(busy) return; busy=true; document.body.style.cursor="progress"; try { await fn(); } catch(e){ toast(e.message || "Erreur"); } finally { busy=false; document.body.style.cursor=""; } }
+let pend=0; function loadOn(){ pend++; clearTimeout(loadOn.t); loadOn.t=setTimeout(()=>{ if(pend) document.body.classList.add("loading"); },120); }
+function loadOff(){ pend=Math.max(0,pend-1); if(!pend){ clearTimeout(loadOn.t); document.body.classList.remove("loading"); } }
+async function run(label, fn){ if(busy) return; busy=true; loadOn(); document.body.style.cursor="progress"; try { await fn(); } catch(e){ toast(e.message || "Erreur"); } finally { busy=false; loadOff(); document.body.style.cursor=""; } }
+/* Enregistrement en arrière-plan : l’écran se met à jour tout de suite, le serveur suit. */
+function later(fn, onErr){ loadOn(); Promise.resolve().then(fn).catch(e=>{ toast((e&&e.message)||"Erreur : enregistrement non effectué"); onErr&&onErr(); }).finally(loadOff); }
+const VC = {};  // ventes déjà ouvertes (affichage instantané, mise à jour en fond)
 
 let D = null;            // {ventes, grilles, catalogue, url}
 let P = [], byId = {};   // catalogue
@@ -545,9 +553,12 @@ function render(){
   a.innerHTML = S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():vCatalogue();
 }
 function scopeObj(scope){ return scope==="draft"?S.draft:scope==="vente"?S.edit:S.gedit; }
-async function load(){ const j=await api("init"); D=j.data; setCat(D.catalogue); }
-async function openVente(code){ const j=await api("vente",{code}); setCur(j.data); go("vente",{tab:S.view==="vente"&&S.cur&&S.cur.vente.code===code?S.tab:"apercu",exp:null}); }
-function setCur(data){ S.cur=data; const v=data.vente, c=data.config;
+async function load(){ const j=await api("init"); D=j.data; setCat(D.catalogue); setTimeout(prefetch,300); }
+async function prefetch(){ const vs=(D.ventes||[]).filter(v=>v.ouvert).slice(0,6); for(const v of vs){ if(VC[v.code]) continue; try{ const j=await api("vente",{code:v.code}); VC[v.code]=j.data; }catch(e){ return; } } }
+async function openVente(code){ const tab=S.view==="vente"&&S.cur&&S.cur.vente.code===code?S.tab:"apercu";
+  if(VC[code]){ setCur(VC[code]); go("vente",{tab,exp:null}); later(async()=>{ const j=await api("vente",{code}); const same=JSON.stringify(j.data)===JSON.stringify(VC[code]); VC[code]=j.data; if(!same&&S.view==="vente"&&S.cur.vente.code===code&&!S.typed){ setCur(j.data); render(); } }); return; }
+  const j=await api("vente",{code}); setCur(j.data); go("vente",{tab,exp:null}); }
+function setCur(data){ S.cur=data; S.typed=false; if(data&&data.vente) VC[data.vente.code]=data; const v=data.vente, c=data.config;
   S.edit={nom:v.nom,code:v.code,resp:v.resp,email:v.email,tel:v.tel,limite:v.limite,livraison:v.livraison,lieu:v.lieu,livraisonTxt:v.livraisonTxt,
     creneau:v.creneau,contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
   const i=D.ventes.findIndex(x=>x.code===v.code); const sv=Object.assign({},v,{configured:c.configured}); if(i>=0) D.ventes[i]=sv; else D.ventes.unshift(sv); }
@@ -589,12 +600,14 @@ document.addEventListener("click",e=>{
   if(d.savegrid!==undefined){ const bg=document.createElement("div"); bg.className="dialog-bg";
     bg.innerHTML=`<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dt"><h3 id="dt">Enregistrer comme grille</h3><div class="field"><label for="gname">Nom de la grille</label><input id="gname" placeholder="Ex. Clubs sportifs"></div><div class="bar"><button class="btn primary" type="button" id="gok">Enregistrer</button><button class="btn" type="button" id="gno">Annuler</button></div></div>`;
     document.body.appendChild(bg); $("#gname").focus(); $("#gno").onclick=()=>bg.remove();
-    $("#gok").onclick=()=>{ const n=$("#gname").value.trim(); if(!n){ $("#gname").focus(); return; } run("",async()=>{ const r=await api("saveGrille",{grille:{nom:n,desc:"Créée depuis la vente "+S.cur.vente.nom+".",resale:S.edit.resale,formats:S.edit.formats,prix:S.edit.prix}}); D.grilles=r.grilles; bg.remove(); toast("Grille « "+n+" » enregistrée"); }); }; return; }
+    $("#gok").onclick=()=>{ const n=$("#gname").value.trim(); if(!n){ $("#gname").focus(); return; } const g={id:"",nom:n,desc:"Créée depuis la vente "+S.cur.vente.nom+".",resale:S.edit.resale,formats:clone(S.edit.formats),prix:clone(S.edit.prix)}; D.grilles=D.grilles.concat([Object.assign({},g,{id:"tmp"+Date.now()})]); bg.remove(); toast("Grille « "+n+" » enregistrée"); later(async()=>{ const r=await api("saveGrille",{grille:g}); D.grilles=r.grilles; }); }; return; }
   if(d.grille!==undefined){ const g=grillesAll().find(x=>x.id===d.grille); S.gedit=g.locked?Object.assign(clone(g),{id:"",nom:"CSE classique (copie)",desc:"",locked:false}):Object.assign(clone(g),{prix:fillPrix(g.prix)}); if(g.locked) toast("La grille par défaut suit le catalogue : voici une copie modifiable."); render(); window.scrollTo({top:0}); return; }
   if(d.gnew!==undefined){ const g=grillesAll()[0]; S.gedit={id:"",nom:"",desc:"",resale:false,formats:clone(g.formats),prix:clone(g.prix)}; render(); return; }
   if(d.gback!==undefined){ S.gedit=null; render(); return; }
-  if(d.gsave!==undefined){ run("",async()=>{ const r=await api("saveGrille",{grille:S.gedit}); D.grilles=r.grilles; S.gedit=null; render(); toast("Grille enregistrée"); }); return; }
-  if(d.gdel!==undefined){ if(t.dataset.confirm!=="1"){ t.dataset.confirm="1"; t.textContent="Confirmer la suppression"; return; } run("",async()=>{ const r=await api("delGrille",{id:S.gedit.id}); D.grilles=r.grilles; S.gedit=null; render(); toast("Grille supprimée"); }); return; }
+  if((d.gsave!==undefined||d.gdel!==undefined)&&/^tmp/.test(S.gedit&&S.gedit.id||"")){ toast("Une seconde : la grille finit de s’enregistrer"); return; }
+  if(d.gsave!==undefined){ const g=clone(S.gedit); if(!String(g.nom||"").trim()){ toast("Donne un nom à la grille"); return; } const tmp=g.id||("tmp"+Date.now()), loc=Object.assign({},g,{id:tmp}), old=D.grilles; D.grilles=g.id?D.grilles.map(x=>x.id===g.id?loc:x):D.grilles.concat([loc]); S.gedit=null; render(); toast("Grille enregistrée");
+    later(async()=>{ const r=await api("saveGrille",{grille:g}); D.grilles=r.grilles; if(S.view==="grilles"&&!S.gedit) render(); }, ()=>{ D.grilles=old; if(S.view==="grilles"&&!S.gedit) render(); }); return; }
+  if(d.gdel!==undefined){ if(t.dataset.confirm!=="1"){ t.dataset.confirm="1"; t.textContent="Confirmer la suppression"; return; } const id=S.gedit.id, old=D.grilles; D.grilles=D.grilles.filter(x=>x.id!==id); S.gedit=null; render(); toast("Grille supprimée"); later(async()=>{ const r=await api("delGrille",{id}); D.grilles=r.grilles; }, ()=>{ D.grilles=old; if(S.view==="grilles"&&!S.gedit) render(); }); return; }
   if(d.catsave!==undefined){ const items=P.map(p=>Object.assign({id:p.id},S.catEdit[p.id])); run("",async()=>{ const r=await api("saveCatalogue",{items}); setCat(r.catalogue); S.catEdit=catInit(); render(); toast("Catalogue enregistré"); }); return; }
   if(d.cfiche){ S.fiche=S.fiche===d.cfiche?null:d.cfiche; render(); return; }
   if(d.newprod!==undefined){ S.newProd={n:"",cat:"classique",s:"",d:"",p33:"2,00",p75:"4,50",c:"#17936F",dev:"",desc:"",med:"",img:""}; render(); return; }
@@ -603,7 +616,7 @@ document.addEventListener("click",e=>{
     run("",async()=>{ const r=await api("saveCatalogue",{items:[{nouveau:true,n:n.n,cat:n.cat,s:n.s,d:n.d,p33:num(n.p33),p75:num(n.p75),c:n.c,dev:n.dev,desc:n.desc,med:n.med,img:n.img}]}); setCat(r.catalogue); S.newProd=null; S.catEdit=catInit(); render(); toast("Produit ajouté"); }); return; }
 });
 document.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr.row")){ e.preventDefault(); run("",()=>openVente(e.target.dataset.open)); } });
-document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset;
+document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset; if(S.view==="vente") S.typed=true;
   if(d.acrole){ run("",async()=>{ const r=await api("saveAcces",{email:d.acrole,role:el.value}); S.acces=r.acces; render(); toast("Accès modifié"); }); return; }
   if(d.on){ scopeObj(d.scope).prix[d.on].on=el.checked; render(); return; }
   if(d.fmt){ const f=scopeObj(d.scope).formats; f[d.fmt]=el.checked; if(!Object.values(f).some(Boolean)){ f[d.fmt]=true; toast("Garde au moins un format"); } render(); return; }
@@ -615,7 +628,7 @@ document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset;
   if(d.npimg!==undefined&&el.files[0]){ try{ S.newProd.img=await resizeImg(el.files[0]); render(); }catch(err){ toast("Image illisible"); } return; }
   if(d.np){ S.newProd[d.np]=el.value; if(d.np==="cat") render(); return; }
   if(el.id==="saveAs"&&S.draft) S.draft.saveAs=el.checked; });
-document.addEventListener("input",e=>{ const el=e.target;
+document.addEventListener("input",e=>{ const el=e.target; if(S.view==="vente") S.typed=true;
   if(el.dataset.d){ const o=S.view==="nouvelle"?S.draft:S.edit; o[el.dataset.d]=el.value; if(S.view==="nouvelle"&&el.dataset.d==="nom"){ o.code=slug(el.value); const c=$("#d-code"); if(c) c.value=o.code; } }
   if(el.dataset.g&&S.gedit) S.gedit[el.dataset.g]=el.value;
   if(el.dataset.np&&S.newProd) S.newProd[el.dataset.np]=el.value;
