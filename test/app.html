@@ -775,12 +775,14 @@ function suiviExtras(D){
     hs.innerHTML=`<h2>Paiement en ligne HelloAsso <span class="meta">(facultatif)</span></h2>
     <p class="meta">Si votre association utilise HelloAsso, vos acheteurs peuvent régler leur commande en ligne, au montant exact, juste après l’avoir validée. L’argent arrive sur votre compte HelloAsso et la commande passe toute seule en « payé ». Votre clé reste sur notre serveur : elle n’est jamais affichée, ni aux acheteurs ni à la brasserie.</p>
     ${h.on?`<p class="st ok">Paiement HelloAsso activé${h.slug?" ("+esc(h.slug)+")":""}${h.env==="prod"?"":" · compte de test"}.</p>`:""}
+    <div style="display:flex;flex-direction:column;gap:10px;margin:12px 0">
+     <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer"><input type="checkbox" id="ha-on" style="width:18px;height:18px;margin:0;flex:none" ${h.on?"checked":""}> Activer le paiement en ligne HelloAsso</label>
+     <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" id="ha-test" style="width:18px;height:18px;margin:0;flex:none" ${h.on&&h.env!=="prod"?"checked":""}> Compte HelloAsso de test (sandbox)</label>
+    </div>
     <div class="og">
-     <label class="full"><span><input type="checkbox" id="ha-on" ${h.on?"checked":""}> Activer le paiement en ligne HelloAsso</span></label>
      <label>Adresse de votre page HelloAsso<input id="ha-slug" value="${esc(h.slug||"")}" placeholder="Ex. helloasso.com/associations/mon-asso"></label>
      <label>Client ID<input id="ha-id" autocomplete="off" placeholder="${h.hasKey?"Enregistré (…"+esc(h.idFin||"")+") : laisser vide pour garder":"À coller ici"}"></label>
      <label>Client Secret<input id="ha-secret" type="password" autocomplete="new-password" placeholder="${h.hasKey?"Enregistré : laisser vide pour garder":"À coller ici"}"></label>
-     <label><span><input type="checkbox" id="ha-test" ${h.on&&h.env!=="prod"?"checked":""}> Compte HelloAsso de test (sandbox)</span></label>
     </div>
     <p class="meta">Votre clé se trouve dans votre espace HelloAsso : <b>Mon Compte › Intégration et API</b>.</p>
     <p class="warn" id="ha-err" hidden></p>
