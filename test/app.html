@@ -293,7 +293,7 @@ td.n,th.n{text-align:right;white-space:nowrap}
 /* Page de commande groupée. Les données viennent du Google Sheet « Commandes CSE »
    via son application Apps Script, appelée sans cookie Google (credentials: "omit"). */
 const API = "https://script.google.com/macros/s/AKfycbxUl_7wwTnrGuGumvA2O6aTi0VBv19FaOEdy6ddojMo7eSRgPd-XdzV0oYLAuAYNbU/exec";
-const LOGO = "data:image/png;base64,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";
+const LOGO = "https://brasseriestephanoise.github.io/commande/img/logo.png";
 const Q = new URLSearchParams(location.search);
 const escM = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -358,9 +358,10 @@ const total = () => amount("33")+amount("75")+amount("soft")+boxAmount();
 const missing = f => { const n=pool(f), k=CARTON[f==="75"?"75":"33"], r=n%k; return r? k-r : 0; };
 const blockers = () => ["33","75"].filter(f=>missing(f)>0);
 const TABS = () => { const t=[], b=B33(), so=SOFTS();
-  if(F.b33&&b.length) t.push(["33","33 cl",range(b.map(x=>x.p33))]);
+  const mix33=F.b33&&b.length&&F.soft&&so.length;
+  if(F.b33&&b.length) t.push(["33",mix33?"33 cl + softs":"33 cl",range(b.map(x=>x.p33).concat(mix33?so.map(x=>x.p33):[]))]);
   if(F.b75&&b.length) t.push(["75","75 cl",range(b.map(x=>x.p75))]);
-  if(F.soft&&so.length) t.push(["soft","Softs",range(so.map(x=>x.p33))]);
+  if(F.soft&&so.length&&!mix33) t.push(["soft","Softs",range(so.map(x=>x.p33))]);
   if(F.box&&BOXES.length) t.push(["box","Coffrets","dès "+eur(Math.min(...BOXES.map(x=>x.p)))]);
   return t; };
 const plural = (n,s,p) => n+" "+(n>1?(p||s+"s"):s);
@@ -370,7 +371,7 @@ function stepsHtml(cur){
   const ci=order.indexOf(cur);
   return `<nav class="steps" aria-label="Étapes">${order.map((k,i)=>`<span class="${i===ci?"on":i<ci?"done":""}">${i+1}. ${lab[k]}</span>`).join("")}</nav>`;
 }
-function topBar(cur){ return `<div class="top"><span class="logo"><img src="${IMG.logo}" alt="La Brasserie Stéphanoise"></span>${cur?stepsHtml(cur):""}</div>`; }
+function topBar(cur){ return `<div class="top"><span class="logo"><img src="https://brasseriestephanoise.github.io/commande/img/logo.png" alt="La Brasserie Stéphanoise"></span>${cur?stepsHtml(cur):""}</div>`; }
 const demo = "";
 
 function render(){
@@ -468,9 +469,9 @@ function beerRow(b,f){
       <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}</span>
       ${pastille(b)?`<span style="margin-top:3px">${pastille(b,true).replace("pas ","pas ").replace('class="pas','style="margin-left:0" class="pas')}</span>`:""}<button type="button" class="fl" data-info="${b.id}">Voir la fiche ›</button></div>
     <div class="stepper"><div class="row">
-      <button class="sbtn" data-dec="${b.id}" aria-label="Retirer une ${esc(b.n)}" ${q?"":"disabled"}>−</button>
+      <button class="sbtn" data-dec="${b.id}" data-f="${f}" aria-label="Retirer une ${esc(b.n)}" ${q?"":"disabled"}>−</button>
       <span class="qty" id="q-${f}-${b.id}" aria-live="polite">${q}</span>
-      <button class="sbtn plus" data-inc="${b.id}" aria-label="Ajouter une ${esc(b.n)}">+</button></div>
+      <button class="sbtn plus" data-inc="${b.id}" data-f="${f}" aria-label="Ajouter une ${esc(b.n)}">+</button></div>
       <span class="sub">${q?eur(q*price(b,f)):""}</span></div>
   </article>`;
 }
@@ -478,7 +479,7 @@ function bieresHtml(){
   const f=S.tab;
   const tabs=TABS();
   const tabHtml=`<div class="tabs" role="tablist">${tabs.map(([k,l,s])=>{
-    const n=k==="box"?boxCount():count(k);
+    const n=k==="box"?boxCount():count(k)+(k==="33"&&!tabs.some(x=>x[0]==="soft")?count("soft"):0);
     return `<button class="tab" role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${l}<small>${s}</small>${n?`<span class="badge">${n}</span>`:""}</button>`;}).join("")}</div>`;
   let body="";
   if(f==="box"){
@@ -495,7 +496,8 @@ function bieresHtml(){
     const grp = g => BEERS.filter(b=>b.g===g);
     if(f==="soft") body = cartonHtml(f) + `<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, dans le même carton que les bières 33 cl</span></div><div class="list">${SOFTS().map(b=>beerRow(b,f)).join("")}</div>`;
     else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${eur(groupPrice(g,f))} la bouteille</span></div>
-      <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("");
+      <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("")
+      + (f==="33"&&F.soft&&SOFTS().length&&!TABS().some(x=>x[0]==="soft")?`<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, dans le même carton</span></div><div class="list">${SOFTS().map(b=>beerRow(b,"soft")).join("")}</div>`:"");
   }
   return `${demo}${topBar("bieres")}<div><h2>Votre commande</h2></div>${CATB().length?`<button type="button" class="hes" data-go="catalogue"><span class="im">${VIT().filter(b=>IMG[b.i]).slice(0,3).map(b=>`<img src="${IMG[b.i]}" alt="">`).join("")}</span><span><b>Vous hésitez ?</b><small>Goûts, styles et médailles : voir les fiches ›</small></span></button>`:""}${tabHtml}${body}`;
 }
@@ -617,9 +619,9 @@ document.addEventListener("click",e=>{
   if(d.close!==undefined){ if(S.compose!==null) refreshCompose(); else closeSheet(); return; }
   if(d.info){ openSheet(d.info); return; }
   if(d.go){ if(d.go==="catalogue"){ openCatalogue(); return; } if(S.screen==="catalogue"&&history.state&&history.state.bs==="cat"){ S.after=d.go; history.back(); return; } go(d.go); return; }
-  if(d.goto){ if(d.goto==="vous") go("vous"); else { S.tab=d.goto; go("bieres"); } return; }
+  if(d.goto){ if(d.goto==="vous") go("vous"); else { S.tab=TABS().some(x=>x[0]===d.goto)?d.goto:(d.goto==="soft"?"33":d.goto); go("bieres"); } return; }
   if(d.tab){ S.tab=d.tab; render(); return; }
-  if(d.inc||d.dec){ const f=S.tab, id=d.inc||d.dec; const v=(S.q[f][id]||0)+(d.inc?1:-1); S.q[f][id]=Math.max(0,Math.min(240,v)); if(!S.q[f][id]) delete S.q[f][id]; render(); bump(`q-${f}-${id}`); return; }
+  if(d.inc||d.dec){ const f=d.f||S.tab, id=d.inc||d.dec; const v=(S.q[f][id]||0)+(d.inc?1:-1); S.q[f][id]=Math.max(0,Math.min(240,v)); if(!S.q[f][id]) delete S.q[f][id]; render(); bump(`q-${f}-${id}`); return; }
   if(d.binc){ if(boxCount()<50) S.boxes.push({t:d.binc,mode:"assort",pick:{}}); render(); bump(`q-box-${d.binc}`); return; }
   if(d.bdec){ for(let k=S.boxes.length-1;k>=0;k--){ if(S.boxes[k].t===d.bdec){ S.boxes.splice(k,1); break; } } render(); bump(`q-box-${d.bdec}`); return; }
   if(d.mode){ const [i,m]=d.mode.split(":"); const x=S.boxes[+i]; x.mode=m; render(); if(m==="mesure"&&!filled(x)) openCompose(+i); return; }
@@ -662,7 +664,7 @@ const total = D.orders.reduce((a,o)=>a+o.montant,0);
 const color = c => /^#2[0-3]1[ef]2[0-1]$/i.test(c) ? "var(--ink)" : c;
 document.getElementById("app").className="";
 document.getElementById("app").innerHTML = `<main>
-  ${D.logo?`<span class="logo"><img src="${D.logo}" alt="La Brasserie Stéphanoise"></span>`:""}
+  ${D.logo?`<span class="logo"><img src="https://brasseriestephanoise.github.io/commande/img/logo.png" alt="La Brasserie Stéphanoise"></span>`:""}
   <div><h1>${esc(D.cse.nom)}</h1>
   <p class="meta">${D.cse.ouvert?`Commandes ouvertes${D.cse.limite?" jusqu’au "+D.cse.limite:""}`:`<span class="closed">Commandes closes</span>`}
   ${D.cse.retrait?" · Retrait / livraison : "+esc(D.cse.retrait)+(D.cse.lieu?", "+esc(D.cse.lieu):""):""}</p>
