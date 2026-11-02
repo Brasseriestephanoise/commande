@@ -778,7 +778,6 @@ function suiviExtras(D){
     ${h.on?`<p class="st ok">Paiement HelloAsso activé${h.slug?" ("+esc(h.slug)+")":""}${h.env==="prod"?"":" · compte de test"}.</p>`:""}
     <div style="display:flex;flex-direction:column;gap:10px;margin:12px 0">
      <label style="display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer"><input type="checkbox" id="ha-on" style="width:18px;height:18px;margin:0;flex:none" ${h.on?"checked":""}> Activer le paiement en ligne HelloAsso</label>
-     <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" id="ha-test" style="width:18px;height:18px;margin:0;flex:none" ${h.on&&h.env!=="prod"?"checked":""}> Compte HelloAsso de test (sandbox)</label>
     </div>
     <div class="og">
      <label>Adresse de votre page HelloAsso<input id="ha-slug" value="${esc(h.slug||"")}" placeholder="Ex. helloasso.com/associations/mon-asso"></label>
@@ -790,7 +789,7 @@ function suiviExtras(D){
     <div class="btns"><button class="btn main" id="ha-save">Enregistrer et tester</button></div>`;
     sec.after(hs);
     hs.querySelector("#ha-save").onclick=async e=>{ const b=e.target, er=hs.querySelector("#ha-err"), g=s=>hs.querySelector(s); er.hidden=true; b.disabled=true; b.textContent="Vérification auprès de HelloAsso…";
-      try{ const r=await post("haSave",{ha:{on:g("#ha-on").checked,env:g("#ha-test").checked?"sandbox":"prod",slug:g("#ha-slug").value.trim(),id:g("#ha-id").value.trim(),secret:g("#ha-secret").value.trim()}});
+      try{ const r=await post("haSave",{ha:{on:g("#ha-on").checked,env:"prod",slug:g("#ha-slug").value.trim(),id:g("#ha-id").value.trim(),secret:g("#ha-secret").value.trim()}});
         if(r&&r.ok){ startSuivi(r.data, r.ha&&r.ha.on?"Paiement HelloAsso activé"+(r.nom?" pour « "+r.nom+" »":"")+" : vos acheteurs pourront payer en ligne.":"Paiement HelloAsso désactivé."); scrollTo(0,0); return; }
         er.textContent=(r&&r.error)||"Enregistrement impossible."; er.hidden=false;
       }catch(x){ er.textContent="Connexion impossible. Réessayez."; er.hidden=false; }
