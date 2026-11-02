@@ -316,7 +316,7 @@ function vExports(){
   if(S.exp==="prep"){
     let t33=0,t75=0,ts=0,tb=0; const rows=P.filter(p=>q[p.id]).map(p=>{const x=q[p.id];t33+=x.q33;t75+=x.q75;ts+=x.soft;tb+=x.bx;return `<tr><td><span class="dot" style="background:${p.c}"></span>${esc(p.n)}</td><td class="num">${p.cat==="soft"?x.soft||"–":x.q33||"–"}</td><td class="num">${x.q75||"–"}</td><td class="num">${x.bx||"–"}</td></tr>`;}).join("");
     html+=`<div class="preview"><div class="head"><h3>Préparation · ${esc(v.nom)}</h3><div class="bar"><button class="btn small primary" type="button" data-xls="prep">Télécharger Excel</button></div></div>
-      <div class="sum">${t33?`<div><b>${t33/12}</b><span>cartons bière 12 × 33 cl · ${t33} bouteilles</span></div>`:""}${t75?`<div><b>${t75/6}</b><span>cartons bière 6 × 75 cl · ${t75} bouteilles</span></div>`:""}${ts?`<div><b>${ts/12}</b><span>cartons soft 12 × 33 cl · ${ts} bouteilles</span></div>`:""}${tb?`<div><b>${tb}</b><span>coffrets</span></div>`:""}</div>
+      <div class="sum">${t33+ts?`<div><b>${(t33+ts)/12}</b><span>cartons 12 × 33 cl · ${t33} bières${ts?" + "+ts+" softs":""}</span></div>`:""}${t75?`<div><b>${t75/6}</b><span>cartons bière 6 × 75 cl · ${t75} bouteilles</span></div>`:""}${tb?`<div><b>${tb}</b><span>coffrets</span></div>`:""}</div>
       <div class="scroll"><table><thead><tr><th>Produit</th><th class="num">33 cl</th><th class="num">75 cl</th><th class="num">Coffrets</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="muted">Aucune commande.</td></tr>`}</tbody></table></div>
       <p class="note">Le fichier Excel contient 3 onglets : « Préparation » (client par client, carton par carton, avec cases Préparé / Payé), « Récap » (stock à sortir) et « Tableau » (une ligne par client, une colonne par produit).</p></div>`;
   }
@@ -365,8 +365,10 @@ async function xlsPrep(){
   let r=5, totV=0;
   O.forEach((o,i)=>{
     const rows=[];
-    FM.forEach(([f,lab,div])=>{ const it=prods(f).map(p=>[p,qOf(o,f,p)]).filter(x=>x[1]); if(!it.length) return;
-      const n=it.reduce((a,x)=>a+x[1],0), m=it.reduce((a,[p,q])=>a+q*up(p,f),0), k=nb(n/div);
+    FM.forEach(([f,lab,div])=>{ if(f==="soft") return;
+      const it=prods(f).map(p=>[p,qOf(o,f,p),f]).concat(f==="33"?prods("soft").map(p=>[p,qOf(o,"soft",p),"soft"]):[]).filter(x=>x[1]); if(!it.length) return;
+      const hasS=it.some(x=>x[2]==="soft"), hasB=it.some(x=>x[2]!=="soft"); if(f==="33") lab=hasS&&!hasB?"Carton 12 × 33 cl (softs)":hasS?"Carton 12 × 33 cl (bières + softs)":"Carton bière 12 × 33 cl";
+      const n=it.reduce((a,x)=>a+x[1],0), m=it.reduce((a,[p,q,ff])=>a+q*up(p,ff),0), k=nb(n/div);
       rows.push([k===1?lab:k+" × "+lab, it.map(([p,q])=>q+" "+p.n).join(", "), n, m]); });
     const bx=prods("box").map(p=>[p,qOf(o,"box",p)]).filter(x=>x[1]);
     if(bx.length) rows.push([bx.map(([p,q])=>q+" × "+p.n).join(", "), o.compo||"", "", bx.reduce((a,[p,q])=>a+q*up(p),0)]);
@@ -393,22 +395,23 @@ async function xlsPrep(){
   let rr=5; const tots=[];
   FM.concat([["box","",0,"COFFRETS","FFF2CC"]]).forEach(([f,lab,div,g,col])=>{ let tot=0;
     prods(f).forEach(p=>{ const n=O.reduce((a,o)=>a+qOf(o,f,p),0); if(!n) return; tot+=n;
-      const X=R.getRow(rr++); X.values=[g,p.n,n,div?nb(n/div):null]; X.eachCell({includeEmpty:true},(c,k)=>{ if(k<=4){ c.border=BD; if(k===1) c.fill=fill(col); if(k>=3) c.alignment={horizontal:"center"}; }}); });
-    if(tot) tots.push([g==="COFFRETS"?"Total coffrets":"Total "+g.toLowerCase().replace("softs","softs"),tot,div?nb(tot/div):null]); });
+      const X=R.getRow(rr++); X.values=[g,p.n,n,div&&f==="75"?nb(n/div):null]; X.eachCell({includeEmpty:true},(c,k)=>{ if(k<=4){ c.border=BD; if(k===1) c.fill=fill(col); if(k>=3) c.alignment={horizontal:"center"}; }}); });
+    if(tot) tots.push([g==="COFFRETS"?"Total coffrets":"Total "+g.toLowerCase(),tot,(div&&f!=="soft"&&f!=="33")?nb(tot/div):null,f]); });
+  { const t33=(tots.find(t=>t[3]==="33")||[])[1]||0, ts=(tots.find(t=>t[3]==="soft")||[])[1]||0; if(t33||ts) tots.push(["Cartons 33 cl (bières + softs mélangés)",t33+ts,nb((t33+ts)/12)]); }
   rr++; tots.forEach(t=>{ const X=R.getRow(rr++); X.values=[null,t[0],t[1],t[2]]; X.font={bold:true}; X.getCell(3).alignment=X.getCell(4).alignment={horizontal:"center"}; });
   const M=R.getRow(rr); M.values=[null,"MONTANT TOTAL",Math.round(totV*100)/100]; M.font={bold:true,size:12}; M.getCell(3).numFmt=EUR;
   // ---------- TABLEAU ----------
   const G=[]; FM.concat([["box","",0,"COFFRETS","FFF2CC"]]).forEach(([f,lab,div,g,col])=>prods(f).forEach(p=>{ if(O.some(o=>qOf(o,f,p))) G.push({f,p,g,col,div,u:up(p,f)}); }));
   const T=wb.addWorksheet("TABLEAU",{views:[{state:"frozen",xSplit:3,ySplit:6}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}});
   head(T,"Tableau des commandes");
-  const c0=4, end=c0+G.length-1, ex=["Bouteilles\n33 cl","Cartons\n12×33","Bouteilles\n75 cl","Cartons\n6×75","Softs","Cartons\nsofts","Coffrets","Montant","Composition des coffrets","Préparé","Payé"];
+  const c0=4, end=c0+G.length-1, ex=["Bouteilles\n33 cl","Cartons 12×33\n(+ softs)","Bouteilles\n75 cl","Cartons\n6×75","Softs","","Coffrets","Montant","Composition des coffrets","Préparé","Payé"];
   T.getRow(5).values=["N°","Nom","Prénom"].concat(G.map(x=>x.p.n),ex); T.getRow(6).getCell(3).value="Prix unitaire";
   let s=c0; ["33 CL","75 CL","SOFTS","COFFRETS"].forEach(g=>{ const n=G.filter(x=>x.g===g).length; if(!n) return; T.getRow(4).getCell(s).value=g; if(n>1) T.mergeCells(4,s,4,s+n-1); s+=n; });
   G.forEach((x,j)=>{ const c=c0+j; T.getRow(6).getCell(c).value=x.u; [4,5,6].forEach(rw=>T.getRow(rw).getCell(c).fill=fill(x.col)); });
   T.getRow(4).font={bold:true,size:12}; T.getRow(4).alignment={horizontal:"center"}; T.getRow(5).height=42;
   const sumF=(o,f,div)=>G.filter(x=>x.f===f).reduce((a,x)=>a+qOf(o,f,x.p),0);
   O.forEach((o,i)=>{ const X=T.getRow(7+i), b33=sumF(o,"33"), b75=sumF(o,"75"), so=sumF(o,"soft"), bx=sumF(o,"box");
-    X.values=[o.n,(o.nom||"").toUpperCase(),o.prenom||""].concat(G.map(x=>qOf(o,x.f,x.p)||null),[b33||null,b33?nb(b33/12):null,b75||null,b75?nb(b75/6):null,so||null,so?nb(so/12):null,bx||null,o.montant,o.compo||null,"☐","☐"]); });
+    X.values=[o.n,(o.nom||"").toUpperCase(),o.prenom||""].concat(G.map(x=>qOf(o,x.f,x.p)||null),[b33||null,(b33+so)?nb((b33+so)/12):null,b75||null,b75?nb(b75/6):null,so||null,null,bx||null,o.montant,o.compo||null,"☐","☐"]); });
   const rt=7+O.length, TT=T.getRow(rt), CT=T.getRow(rt+1); TT.getCell(2).value="TOTAL"; CT.getCell(2).value="Cartons";
   for(let c=c0;c<=end+8;c++){ let t=0; for(let k=0;k<O.length;k++){ const val=T.getRow(7+k).getCell(c).value; t+=typeof val==="number"?val:0; } TT.getCell(c).value=Math.round(t*100)/100; }
   G.forEach((x,j)=>{ if(x.div) CT.getCell(c0+j).value=nb(TT.getCell(c0+j).value/x.div); });

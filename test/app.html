@@ -341,7 +341,8 @@ const $ = s => document.querySelector(s);
 function price(b,f){ return f==="75"?b.p75:b.p33; }
 const plateImg = (b,alt) => IMG[b.i] ? `<img src="${IMG[b.i]}" alt="${alt||""}">` : `<span class="noimg" style="--c:${b.c}">${esc(b.n.replace(/^(La |Le |L’|L')/,"").slice(0,2))}</span>`;
 const B33 = () => BEERS.filter(b=>b.g!=="soft"), SOFTS = () => BEERS.filter(b=>b.g==="soft");
-const flab = f => f==="soft"?"softs":f+" cl";
+const flab = f => f==="75"?"75 cl":(F.soft?"33 cl (bières ou softs)":"33 cl");
+const pool = f => f==="75"?count("75"):count("33")+count("soft");
 const count = f => Object.values(S.q[f]).reduce((a,b)=>a+b,0);
 const amount = f => BEERS.reduce((a,b)=>a+(S.q[f][b.id]||0)*price(b,f),0);
 const BT = id => BOXES.find(b=>b.id===id);
@@ -354,8 +355,8 @@ const boxLabel = (x,i) => { const same=S.boxes.filter(y=>y.t===x.t); return BT(x
 const boxTodo = () => S.boxes.filter(x=>x.mode==="mesure" && filled(x)<BT(x.t).cap);
 const pickText = x => BEERS.filter(b=>x.pick[b.id]).map(b=>`${x.pick[b.id]} × ${b.n}`).join(", ");
 const total = () => amount("33")+amount("75")+amount("soft")+boxAmount();
-const missing = f => { const n=count(f), k=CARTON[f], r=n%k; return r? k-r : 0; };
-const blockers = () => ["33","75","soft"].filter(f=>missing(f)>0);
+const missing = f => { const n=pool(f), k=CARTON[f==="75"?"75":"33"], r=n%k; return r? k-r : 0; };
+const blockers = () => ["33","75"].filter(f=>missing(f)>0);
 const TABS = () => { const t=[], b=B33(), so=SOFTS();
   if(F.b33&&b.length) t.push(["33","33 cl",range(b.map(x=>x.p33))]);
   if(F.b75&&b.length) t.push(["75","75 cl",range(b.map(x=>x.p75))]);
@@ -395,7 +396,7 @@ function homeHtml(){
   ${(CSE.retrait||CSE.lieu||CSE.creneau||CSE.paiement||CSE.contact)?`<section class="card"><p class="note" style="margin:0;line-height:1.7">${CSE.retrait?`<b>Livraison :</b> ${esc(CSE.retrait)}${CSE.lieu?", "+esc(CSE.lieu):""}<br>`:(CSE.lieu?`<b>Lieu de retrait :</b> ${esc(CSE.lieu)}<br>`:"")}${CSE.creneau?`<b>Créneau :</b> ${esc(CSE.creneau)}<br>`:""}${CSE.paiement?`<b>Paiement :</b> ${esc(CSE.paiement)}<br>`:""}${CSE.contact?`<b>Contact :</b> ${esc(CSE.contact)}`:""}</p></section>`:""}
   <ol class="how">
     <li><span class="n">1</span><p><b>Indiquez votre nom</b><small>Pour que ${ISCSE?"le CSE":"l’organisateur"} retrouve votre commande à la livraison.</small></p></li>
-    <li><span class="n">2</span><p><b>Choisissez vos ${F.b33||F.b75?"bières":"coffrets"}${(F.b33||F.b75)&&F.box?" et coffrets":""}</b><small>${[F.b33?"33 cl par cartons de 12":"",F.b75?"75 cl par cartons de 6":"",F.soft?"softs par cartons de 12":""].filter(Boolean).join(", ")}${F.b33||F.b75?". Vous pouvez mélanger les bières dans un carton.":""}</small></p></li>
+    <li><span class="n">2</span><p><b>Choisissez vos ${F.b33||F.b75?"bières":"coffrets"}${(F.b33||F.b75)&&F.box?" et coffrets":""}</b><small>${[F.b33?"33 cl par cartons de 12":"",F.b75?"75 cl par cartons de 6":"",F.soft?"softs dans les mêmes cartons de 12 que les bières 33 cl":""].filter(Boolean).join(", ")}${F.b33||F.b75?(F.soft?". Vous pouvez mélanger bières et softs dans un carton.":". Vous pouvez mélanger les bières dans un carton."):""}</small></p></li>
     <li><span class="n">3</span><p><b>Validez</b><small>Vous recevez un récapitulatif par e-mail. Le règlement se fait à la livraison.</small></p></li>
   </ol>
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
@@ -426,14 +427,14 @@ function vousHtml(){
 }
 
 function cartonHtml(f){
-  const n=count(f), k=CARTON[f], full=Math.floor(n/k), r=n%k, miss=missing(f);
+  const n=pool(f), k=CARTON[f==="75"?"75":"33"], full=Math.floor(n/k), r=n%k, miss=missing(f), mix=f!=="75"&&F.soft;
   const filled = n===0?0:(r===0?k:r);
   let cls="", msg="";
-  if(n===0){ msg=f==="soft"?"Aucun soft pour l’instant.":`Aucune bouteille en ${f} cl pour l’instant.`; }
+  if(n===0){ msg=mix?"Aucune bouteille de 33 cl pour l’instant (bières et softs se mélangent dans le carton).":`Aucune bouteille en ${f==="75"?75:33} cl pour l’instant.`; }
   else if(miss){ cls="warn"; msg=`Ajoutez ${plural(miss,"bouteille")} pour compléter le carton.`; }
   else { cls="ok"; msg=`${plural(full,"carton complet","cartons complets")}.`; }
   const label = n===0?`Carton de ${k}`:`Carton ${full+(r?1:0)} : ${filled}/${k}`;
-  return `<div class="carton ${cls}" aria-live="polite"><div class="t"><span>${f==="soft"?"Softs 33 cl":f+" cl"} · ${label}</span><span>${plural(n,"bouteille")}</span></div>
+  return `<div class="carton ${cls}" aria-live="polite"><div class="t"><span>${f==="75"?"75 cl":mix?"33 cl · bières + softs":"33 cl"} · ${label}</span><span>${plural(n,"bouteille")}</span></div>
     <div class="slots ${f==="75"?"big":""}" aria-hidden="true">${Array.from({length:k},(_,i)=>`<i class="slot${i<filled?" f":""}"></i>`).join("")}</div>
     <p>${msg}</p></div>`;
 }
@@ -492,7 +493,7 @@ function bieresHtml(){
     <div class="list">${S.boxes.map((x,i)=>myBoxHtml(x,i)).join("")}</div>`:""}`;
   } else {
     const grp = g => BEERS.filter(b=>b.g===g);
-    if(f==="soft") body = cartonHtml(f) + `<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, cartons de 12</span></div><div class="list">${SOFTS().map(b=>beerRow(b,f)).join("")}</div>`;
+    if(f==="soft") body = cartonHtml(f) + `<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, dans le même carton que les bières 33 cl</span></div><div class="list">${SOFTS().map(b=>beerRow(b,f)).join("")}</div>`;
     else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${eur(groupPrice(g,f))} la bouteille</span></div>
       <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("");
   }
@@ -539,9 +540,10 @@ function recapHtml(){
   return `${demo}${topBar("recap")}<h2>Vérifiez votre commande</h2>
   <section class="card"><h3>Vous<button data-goto="vous">Modifier</button></h3>
     <dl class="who"><dt>Nom</dt><dd>${esc(p.prenom)} ${esc(p.nom)}</dd><dt>E-mail</dt><dd style="overflow-wrap:anywhere">${esc(p.email)}</dd>${p.service?`<dt>Service</dt><dd>${esc(p.service)}</dd>`:""}${p.tel?`<dt>Téléphone</dt><dd>${esc(p.tel)}</dd>`:""}<dt>Vente</dt><dd>${esc(CSE.nom)}</dd></dl></section>
-  ${n33?sec(`33 cl · ${plural(n33/12,"carton")}`,recapLines("33"),"33"):""}
+  ${n33?sec(`33 cl · ${plural(n33,"bouteille")}${count("soft")?"":" · "+plural(n33/12,"carton")}`,recapLines("33"),"33"):""}
   ${n75?sec(`75 cl · ${plural(n75/6,"carton")}`,recapLines("75"),"75"):""}
-  ${count("soft")?sec(`Softs · ${plural(count("soft")/12,"carton")}`,recapLines("soft"),"soft"):""}
+  ${count("soft")?sec(`Softs · ${plural(count("soft"),"bouteille")}`,recapLines("soft"),"soft"):""}
+  ${count("soft")?`<p class="note" style="margin:-4px 2px 0">${plural((n33+count("soft"))/12,"carton")} de 33 cl, bières et softs mélangés.</p>`:""}
   ${nb?sec(`Coffrets · ${nb}`,S.boxes.map((x,i)=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${esc(boxLabel(x,i))}<br><small>${x.mode==="assort"?"Assortiment de la brasserie":"Sur mesure : "+esc(pickText(x))}</small></span><span>${eur(BT(x.t).p)}</span></div>`).join(""),"box"):""}
   <div class="tot"><span>Total</span><span>${eur(total())}</span></div>
   ${nb?`<p class="note">Dont ${eur(boxSaving())} d’économie sur les coffrets.</p>`:""}
