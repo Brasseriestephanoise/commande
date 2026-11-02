@@ -575,6 +575,7 @@ function haShow(n,paid,msg){ const bar=$("#bar"); if(bar) bar.hidden=true; const
   <p class="note"><a href="?cse=${encodeURIComponent(Q.get("cse")||"")}">Revenir à la page de commande</a></p></section>`; }
 function haReturn(){ const n=Q.get("ha"); const bar=$("#bar"); if(bar) bar.hidden=true; $("#app").innerHTML=`${topBar()}<section class="done"><h1>Vérification du paiement…</h1></section>`;
   haPost({action:"haCheck",n}).then(r=>haShow(n,!!(r.ok&&r.paid),r.ok?"":r.error)).catch(()=>haShow(n,false,"Vérification impossible pour le moment. Rechargez la page dans quelques instants.")); }
+window.haReturn=haReturn;
 
 function renderBar(){
   const bar=$("#bar"), inn=$("#barIn");
