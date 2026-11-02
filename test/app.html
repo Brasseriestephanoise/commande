@@ -444,7 +444,7 @@ const medOr = b => (b.med||[]).some(m=>/\bor\b/i.test(m));
 const pastille = (b,inl) => isNew(b)?`<span class="pas${inl?" inl":""}">Nouveau</span>`:((b.chip||(b.med&&b.med.length))?`<span class="pas med${inl?" inl":""}">${esc(b.chip||(medOr(b)?"Médaille d’or":"Médaillée"))}</span>`:"");
 const VIT = () => CATB().slice().sort((a,b)=>(isNew(b)-isNew(a))||((b.chip||(b.med||[]).length)?1:0)-((a.chip||(a.med||[]).length)?1:0));
 function vitrineHtml(){ const bs=VIT(); if(!bs.length) return ""; const mot=F.soft&&!(F.b33||F.b75)?"boissons":"bières";
-  return `<section class="vit" aria-label="Nos ${mot}"><div class="vh"><h3>Nos ${bs.length} ${mot}</h3><button type="button" data-go="catalogue">Tout voir ›</button></div>
+  return `<section class="vit" aria-label="Nos ${mot}"><div class="vh"><h3>${(()=>{const nb=bs.filter(b=>b.g!=="soft").length, ns=bs.length-nb; return nb&&ns?`Nos ${nb} bières et ${ns} softs`:`Nos ${bs.length} ${mot}`;})()}</h3><button type="button" data-go="catalogue">Tout voir ›</button></div>
   <div class="car">${bs.map(b=>`<button type="button" class="vc" data-info="${b.id}" aria-label="Fiche ${esc(b.n)}">${pastille(b)}<span class="pic">${IMG[b.i]?`<img src="${IMG[b.i]}" alt="" loading="lazy" decoding="async">`:plateImg(b)}</span><b>${esc(b.n)}</b><small>${esc(b.s)}${b.d&&b.g!=="soft"?" · "+esc(b.d):""}</small></button>`).join("")}
   <button type="button" class="vc more" data-go="catalogue"><i>›</i>Voir les ${bs.length} fiches</button></div></section>`; }
 function catalogueHtml(){
