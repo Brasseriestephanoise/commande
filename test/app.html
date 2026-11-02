@@ -95,6 +95,25 @@ h2{font-size:21px;margin:0;font-weight:700;text-wrap:balance}
 .beer.has{border-color:var(--c)}
 .plate{background:var(--plate);border:1px solid var(--plate-line);border-radius:8px;height:78px;display:flex;align-items:center;justify-content:center;padding:3px;cursor:pointer}
 .plate img{max-height:100%;width:auto}
+.vit{display:flex;flex-direction:column;gap:8px}
+.vit .vh{display:flex;justify-content:space-between;align-items:baseline}.vit .vh h3{margin:0;font-size:17px}
+.vit .vh button{font:inherit;font-size:14px;font-weight:700;color:var(--brand);background:none;border:0;padding:4px 0;cursor:pointer}
+.car{display:flex;gap:10px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.car::-webkit-scrollbar{display:none}
+.vc{flex:0 0 122px;scroll-snap-align:start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 6px 9px;display:flex;flex-direction:column;gap:3px;position:relative;cursor:pointer;text-align:left;font:inherit;color:var(--ink)}
+.vc .pic{height:128px;background:var(--plate);border-radius:9px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:3px}
+.vc .pic img{max-width:100%;max-height:100%;object-fit:contain}
+.vc .pic .noimg{display:flex;align-items:center;justify-content:center;width:56px;height:80px;font-size:20px;border-radius:6px;background:var(--c);color:#fff;font-weight:800}
+.vc b{font-size:13.5px;line-height:1.2}.vc small{font-size:11.5px;color:var(--muted);line-height:1.25}
+.vc.more{border:1.5px dashed var(--brand);justify-content:center;align-items:center;text-align:center;color:var(--brand);font-weight:800;font-size:14px;gap:6px}
+.vc.more i{font-style:normal;font-size:28px;line-height:1}
+.pas{position:absolute;top:10px;left:10px;font-size:10.5px;font-weight:800;color:#fff;background:#D9432F;border-radius:999px;padding:2px 7px;letter-spacing:.02em;z-index:1}
+.pas.med{background:var(--gold-bg);color:var(--gold)}
+.pas.inl{position:static;display:inline-block;margin-left:6px;vertical-align:2px}
+.hes{display:flex;align-items:center;gap:12px;width:100%;background:var(--gold-bg);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
+.hes .im{display:flex;flex:0 0 auto}.hes .im img{width:30px;height:40px;object-fit:contain;background:var(--plate);border:2px solid var(--gold-bg);border-radius:6px;margin-left:-9px}.hes .im img:first-child{margin-left:0}
+.hes b{display:block;font-size:15px}.hes small{color:var(--muted);font-size:13px}
+.fl{font:inherit;font-size:12.5px;font-weight:700;color:var(--brand);background:none;border:0;padding:2px 0 0;cursor:pointer;text-align:left}
 .catlink{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
 .catlink b{display:block;font-size:16px}.catlink small{color:var(--muted);font-size:13.5px}.catlink .arr{font-size:22px;font-weight:800;color:var(--muted)}
 .hint{font-size:13.5px;color:var(--muted);margin:0}.hint button{font:inherit;color:var(--ink);font-weight:700;background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
@@ -361,7 +380,7 @@ function render(){
   if(S.screen==="recap") app.innerHTML = recapHtml();
   if(S.screen==="done") app.innerHTML = doneHtml();
   if(S.screen==="catalogue") app.innerHTML = catalogueHtml();
-  renderBar();
+  renderBar(); savePanier();
 }
 
 function homeHtml(){
@@ -372,8 +391,7 @@ function homeHtml(){
     <div class="cse"><span class="lead">Commande organisée par</span>${CSE.limiteCourt?`<span class="dl">Date limite<strong>${CSE.limiteCourt}</strong></span>`:""}<b>${esc(CSE.nom)}</b></div>${CSE.message?`<p class="lead" style="margin-top:14px;white-space:pre-line">${esc(CSE.message)}</p>`:""}
   </section>
   ${CSE.ouvert?"":`<p class="closed">Les commandes sont closes${CSE.limite?" depuis le "+CSE.limite:""}. Rapprochez-vous de ${QUI} pour toute question.</p>`}
-  <div class="frieze" aria-hidden="true">${BEERS.filter(b=>IMG[b.i]).map(b=>`<img src="${IMG[b.i]}" alt="">`).join("")}</div>
-  ${CATB().length?`<button class="catlink" type="button" data-go="catalogue"><span><b>Découvrir nos ${F.soft&&!(F.b33||F.b75)?"boissons":"bières"}</b><small>Styles, goûts, médailles : toutes les fiches en un coup d’œil.</small></span><span class="arr" aria-hidden="true">›</span></button>`:""}
+  ${vitrineHtml()}
   ${(CSE.retrait||CSE.lieu||CSE.creneau||CSE.paiement||CSE.contact)?`<section class="card"><p class="note" style="margin:0;line-height:1.7">${CSE.retrait?`<b>Livraison :</b> ${esc(CSE.retrait)}${CSE.lieu?", "+esc(CSE.lieu):""}<br>`:(CSE.lieu?`<b>Lieu de retrait :</b> ${esc(CSE.lieu)}<br>`:"")}${CSE.creneau?`<b>Créneau :</b> ${esc(CSE.creneau)}<br>`:""}${CSE.paiement?`<b>Paiement :</b> ${esc(CSE.paiement)}<br>`:""}${CSE.contact?`<b>Contact :</b> ${esc(CSE.contact)}`:""}</p></section>`:""}
   <ol class="how">
     <li><span class="n">1</span><p><b>Indiquez votre nom</b><small>Pour que ${ISCSE?"le CSE":"l’organisateur"} retrouve votre commande à la livraison.</small></p></li>
@@ -420,6 +438,14 @@ function cartonHtml(f){
     <p>${msg}</p></div>`;
 }
 const CATB = () => BEERS.filter(b=>b.g==="soft"?F.soft:true);
+const isNew = b => /nouv/i.test(b.chip||"");
+const medOr = b => (b.med||[]).some(m=>/\bor\b/i.test(m));
+const pastille = (b,inl) => isNew(b)?`<span class="pas${inl?" inl":""}">Nouveau</span>`:((b.chip||(b.med&&b.med.length))?`<span class="pas med${inl?" inl":""}">${esc(b.chip||(medOr(b)?"Médaille d’or":"Médaillée"))}</span>`:"");
+const VIT = () => CATB().slice().sort((a,b)=>(isNew(b)-isNew(a))||((b.chip||(b.med||[]).length)?1:0)-((a.chip||(a.med||[]).length)?1:0));
+function vitrineHtml(){ const bs=VIT(); if(!bs.length) return ""; const mot=F.soft&&!(F.b33||F.b75)?"boissons":"bières";
+  return `<section class="vit" aria-label="Nos ${mot}"><div class="vh"><h3>Nos ${bs.length} ${mot}</h3><button type="button" data-go="catalogue">Tout voir ›</button></div>
+  <div class="car">${bs.map(b=>`<button type="button" class="vc" data-info="${b.id}" aria-label="Fiche ${esc(b.n)}">${pastille(b)}<span class="pic">${IMG[b.i]?`<img src="${IMG[b.i]}" alt="" loading="lazy" decoding="async">`:plateImg(b)}</span><b>${esc(b.n)}</b><small>${esc(b.s)}${b.d&&b.g!=="soft"?" · "+esc(b.d):""}</small></button>`).join("")}
+  <button type="button" class="vc more" data-go="catalogue"><i>›</i>Voir les ${bs.length} fiches</button></div></section>`; }
 function catalogueHtml(){
   const groups=[["classique","Bières classiques"],["speciale","Bières spéciales"],["soft","Softs bio · sans alcool"]];
   const px=b=>b.g==="soft"?[["33 cl",b.p33]]:[F.b33||!F.b75?["33 cl",b.p33]:null,F.b75?["75 cl",b.p75]:null].filter(x=>x&&x[1]);
@@ -428,7 +454,7 @@ function catalogueHtml(){
   ${groups.map(([g,lab])=>{ const bs=CATB().filter(b=>b.g===g); if(!bs.length) return "";
     return `<div class="group"><h3>${lab}</h3></div><div class="cat">${bs.map(b=>`<article class="ccard" style="--c:${b.c}">
       <div class="pic">${plateImg(b,"Étiquette "+esc(b.n))}</div>
-      <div><h3>${esc(b.n)}</h3><p class="meta">${esc(b.s)}${b.d?" · "+esc(b.d):""}</p>${b.dev?`<p class="dev">${esc(b.dev)}</p>`:""}
+      <div><h3>${esc(b.n)}${pastille(b,true)}</h3><p class="meta">${esc(b.s)}${b.d?" · "+esc(b.d):""}</p>${b.dev?`<p class="dev">${esc(b.dev)}</p>`:""}
       ${b.desc?`<p class="d">${esc(b.desc)}</p>`:""}${b.med&&b.med.length?`<ul>${b.med.map(m=>`<li>${esc(m)}</li>`).join("")}</ul>`:""}
       <div class="px">${px(b).map(([f,p])=>`<span>${f} · ${eur(p)}</span>`).join("")}</div></div></article>`).join("")}</div>`; }).join("")}
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
@@ -439,7 +465,7 @@ function beerRow(b,f){
     <div class="plate" data-info="${b.id}" role="button" tabindex="0" aria-label="Voir la fiche ${esc(b.n)}">${plateImg(b)}</div>
     <div class="info"><button class="name" data-info="${b.id}">${esc(b.n)}</button>
       <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}</span>
-      ${b.chip?`<span class="medal">${b.chip}</span>`:""}</div>
+      ${pastille(b)?`<span style="margin-top:3px">${pastille(b,true).replace("pas ","pas ").replace('class="pas','style="margin-left:0" class="pas')}</span>`:""}<button type="button" class="fl" data-info="${b.id}">Voir la fiche ›</button></div>
     <div class="stepper"><div class="row">
       <button class="sbtn" data-dec="${b.id}" aria-label="Retirer une ${esc(b.n)}" ${q?"":"disabled"}>−</button>
       <span class="qty" id="q-${f}-${b.id}" aria-live="polite">${q}</span>
@@ -470,7 +496,7 @@ function bieresHtml(){
     else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${eur(groupPrice(g,f))} la bouteille</span></div>
       <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("");
   }
-  return `${demo}${topBar("bieres")}<div><h2>Votre commande</h2><p class="hint">Touchez une étiquette pour découvrir la bière, ou <button type="button" data-go="catalogue">voir toutes les fiches</button>.</p></div>${tabHtml}${body}`;
+  return `${demo}${topBar("bieres")}<div><h2>Votre commande</h2></div>${CATB().length?`<button type="button" class="hes" data-go="catalogue"><span class="im">${VIT().filter(b=>IMG[b.i]).slice(0,3).map(b=>`<img src="${IMG[b.i]}" alt="">`).join("")}</span><span><b>Vous hésitez ?</b><small>Goûts, styles et médailles : voir les fiches ›</small></span></button>`:""}${tabHtml}${body}`;
 }
 
 function myBoxHtml(x,i){
@@ -563,16 +589,23 @@ function go(screen){ S.screen=screen; render(); window.scrollTo({top:0}); }
 function bump(id){ const el=document.getElementById(id); if(el){el.classList.remove("pop");void el.offsetWidth;el.classList.add("pop");} }
 
 function openSheet(id){
+  if(!(history.state&&history.state.bs==='sheet')) try{ history.pushState({bs:'sheet'},''); }catch(e){}
   const b=BEERS.find(x=>x.id===id), bg=$("#sheetBg");
   bg.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(b.n)}" style="--c:${b.c}">
     <div class="head"><div class="plate">${plateImg(b,"Étiquette "+esc(b.n))}</div>
-    <div><h2 style="color:var(--c)">${esc(b.n)}</h2><p class="meta">${esc(b.s)} · ${b.d}</p><p class="dev">${b.dev}</p>
+    <div><h2 style="color:var(--c)">${esc(b.n)}</h2>${pastille(b,true)?`<p style="margin:2px 0">${pastille(b,true)}</p>`:""}<p class="meta">${esc(b.s)} · ${b.d}</p><p class="dev">${b.dev}</p>
     <p class="meta">${b.g==="soft"||!F.b75?"33 cl "+eur(price(b,"33")):(F.b33?"33 cl "+eur(price(b,"33"))+" · ":"")+"75 cl "+eur(price(b,"75"))}</p></div></div>
     <p>${b.desc}</p>${b.med.length?`<ul>${b.med.map(m=>`<li>${m}</li>`).join("")}</ul>`:""}
     <button class="cta" data-close>Fermer</button></div>`;
   bg.hidden=false; bg.querySelector("[data-close]").focus();
 }
-function closeSheet(){ const bg=$("#sheetBg"); bg.hidden=true; bg.innerHTML=""; }
+function closeSheet(fromPop){ const bg=$("#sheetBg"); const was=!bg.hidden; bg.hidden=true; bg.innerHTML=""; if(was&&!fromPop&&history.state&&history.state.bs==='sheet') history.back(); }
+/* Bouton « retour » du téléphone : ferme la fiche ou quitte le catalogue sans perdre la commande. */
+window.addEventListener("popstate",()=>{ const bg=$("#sheetBg"); if(!bg.hidden&&S.compose===null){ closeSheet(true); return; } if(S.screen==="catalogue"){ const to=S.after||S.prev||"home"; S.after=null; go(to); } });
+function openCatalogue(){ if(S.screen==="catalogue") return; S.prev=S.screen; try{ history.pushState({bs:'cat'},''); }catch(e){} go("catalogue"); }
+const CKEY="bs_panier_"+(CSE.code||"");
+function savePanier(){ try{ if(S.screen==="done"){ sessionStorage.removeItem(CKEY); return; } sessionStorage.setItem(CKEY,JSON.stringify({q:S.q,boxes:S.boxes,person:S.person,t:Date.now()})); }catch(e){} }
+(function(){ try{ const x=JSON.parse(sessionStorage.getItem(CKEY)||"null"); if(x&&Date.now()-x.t<12*3600e3){ S.q=Object.assign({"33":{},"75":{},"soft":{}},x.q||{}); S.boxes=x.boxes||[]; S.person=Object.assign(S.person,x.person||{}); } }catch(e){} })();
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,[data-info],[data-go]");
@@ -581,7 +614,7 @@ document.addEventListener("click",e=>{
   const d=t.dataset;
   if(d.close!==undefined){ if(S.compose!==null) refreshCompose(); else closeSheet(); return; }
   if(d.info){ openSheet(d.info); return; }
-  if(d.go){ if(d.go==="catalogue") S.prev=S.screen; go(d.go); return; }
+  if(d.go){ if(d.go==="catalogue"){ openCatalogue(); return; } if(S.screen==="catalogue"&&history.state&&history.state.bs==="cat"){ S.after=d.go; history.back(); return; } go(d.go); return; }
   if(d.goto){ if(d.goto==="vous") go("vous"); else { S.tab=d.goto; go("bieres"); } return; }
   if(d.tab){ S.tab=d.tab; render(); return; }
   if(d.inc||d.dec){ const f=S.tab, id=d.inc||d.dec; const v=(S.q[f][id]||0)+(d.inc?1:-1); S.q[f][id]=Math.max(0,Math.min(240,v)); if(!S.q[f][id]) delete S.q[f][id]; render(); bump(`q-${f}-${id}`); return; }

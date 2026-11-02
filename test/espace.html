@@ -505,12 +505,13 @@ function vGrilles(){
   <p class="note">La grille « CSE classique » reprend toujours les prix de base du catalogue : pour la modifier, change les prix dans l’onglet Catalogue.</p>`;
 }
 
-function catInit(){ return Object.fromEntries(P.map(p=>[p.id,{dispo:p.dispo,p33:p.p33,p75:p.p75,p:p.p,n:p.n,s:p.s,d:p.d||"",dev:p.dev||"",desc:p.desc||"",med:(p.med||"").split(";").map(x=>x.trim()).filter(Boolean).join("\n"),c:p.c}])); }
+function catInit(){ return Object.fromEntries(P.map(p=>[p.id,{dispo:p.dispo,p33:p.p33,p75:p.p75,p:p.p,n:p.n,s:p.s,d:p.d||"",dev:p.dev||"",desc:p.desc||"",med:(p.med||"").split(";").map(x=>x.trim()).filter(Boolean).join("\n"),chip:p.chip||"",c:p.c}])); }
 function ficheHtml(p,x,cols){ const f=(k,l,ph)=>`<div class="field"><label>${l}</label><input data-cf="${p.id}" data-fk="${k}" value="${esc(x[k]||"")}" placeholder="${ph||""}"></div>`;
   return `<tr class="fiche"><td colspan="${cols}"><div class="grid2">${f("n","Nom")}${f("s","Style","Ex. Blonde au miel")}${f("d","Degré","Ex. 5,5°")}${f("dev","Devise (en italique)","Ex. Bière de joie")}
     <div class="field" style="grid-column:1/-1"><label>Description</label><textarea rows="4" data-cf="${p.id}" data-fk="desc">${esc(x.desc||"")}</textarea></div>
     <div class="field" style="grid-column:1/-1"><label>Médailles (une par ligne)</label><textarea rows="3" data-cf="${p.id}" data-fk="med" placeholder="Médaille d’or 2026 – Concours International de Lyon">${esc(x.med||"")}</textarea></div>
-    <div class="field"><label>Couleur</label><input type="color" data-cf="${p.id}" data-fk="c" value="${esc(x.c||"#17936F")}"></div></div>
+    <div class="field"><label>Couleur</label><input type="color" data-cf="${p.id}" data-fk="c" value="${esc(x.c||"#17936F")}"></div>
+    <label class="field" style="display:flex;gap:10px;align-items:center;flex-direction:row"><input type="checkbox" class="switch" data-cf="${p.id}" data-fk="chip" ${/nouv/i.test(x.chip||"")?"checked":""}> <span>Pastille <b>« Nouveau »</b> sur la page de commande</span></label></div>
     <p class="note">Ces textes s’affichent dans le catalogue et la fiche de la page de commande. Clique sur « Enregistrer le catalogue » pour les publier.</p></td></tr>`; }
 function vCatalogue(){
   const E=S.catEdit;
@@ -638,7 +639,7 @@ document.addEventListener("input",e=>{ const el=e.target; if(S.view==="vente") S
   if(el.dataset.d){ const o=S.view==="nouvelle"?S.draft:S.edit; o[el.dataset.d]=el.value; if(S.view==="nouvelle"&&el.dataset.d==="nom"){ o.code=slug(el.value); const c=$("#d-code"); if(c) c.value=o.code; } }
   if(el.dataset.g&&S.gedit) S.gedit[el.dataset.g]=el.value;
   if(el.dataset.np&&S.newProd) S.newProd[el.dataset.np]=el.value;
-  if(el.dataset.cf&&S.catEdit&&S.catEdit[el.dataset.cf]) S.catEdit[el.dataset.cf][el.dataset.fk]=el.value;
+  if(el.dataset.cf&&S.catEdit&&S.catEdit[el.dataset.cf]) S.catEdit[el.dataset.cf][el.dataset.fk]=el.type==="checkbox"?(el.checked?"Nouveau":""):el.value;
   if(el.id==="saveName"&&S.draft){ S.draft.saveName=el.value; S.draft.saveAs=!!el.value.trim(); const c=$("#saveAs"); if(c) c.checked=S.draft.saveAs; } });
 
 render();
