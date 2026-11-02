@@ -47,11 +47,11 @@ function get(q) {
 // La page elle-même (app.html) est servie par GitHub, rapide ; secours : la copie du Google Sheet.
 var app = fetch("app.html?v=" + Date.now()).then(function(r){ if(!r.ok) throw 0; return r.text(); })
   .catch(function(){ return get("?api=app"); });
-var data = (P.get("cse") && !P.has("cle") && !P.get("desinscription"))
-  ? get("?api=page&cse=" + encodeURIComponent(P.get("cse"))).then(function(s){ return JSON.parse(s); }).catch(function(){ return null; })
+var data = (P.get("cse") && !P.get("desinscription"))
+  ? get(P.has("cle") ? "?api=suivi&cse=" + encodeURIComponent(P.get("cse")) + "&cle=" + encodeURIComponent(P.get("cle")) : "?api=page&cse=" + encodeURIComponent(P.get("cse"))).then(function(s){ return JSON.parse(s); }).catch(function(){ return null; })
   : Promise.resolve(null);
 Promise.all([app, data])
-  .then(function(v){ window.__PRE = v[1]; document.open(); document.write(v[0]); document.close(); })
+  .then(function(v){ clearTimeout(lent); window.__PRE = v[1]; document.open(); document.write(v[0]); document.close(); })
   .catch(function(){ clearTimeout(lent); document.getElementById("s").style.display = "none"; document.getElementById("h").textContent = "La page n’a pas pu se charger"; document.getElementById("m").textContent = "Vérifiez votre connexion internet puis rechargez la page."; });
 })();
 </script>
