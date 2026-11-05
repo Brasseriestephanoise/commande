@@ -295,6 +295,11 @@ td.n,th.n{text-align:right;white-space:nowrap}
 const API = "https://script.google.com/macros/s/AKfycbxUl_7wwTnrGuGumvA2O6aTi0VBv19FaOEdy6ddojMo7eSRgPd-XdzV0oYLAuAYNbU/exec";
 const LOGO = "https://brasseriestephanoise.github.io/commande/img/logo.png";
 const Q = new URLSearchParams(location.search);
+// Réglages particuliers par vente (code de la vente) : taille de carton et prix boutique barré.
+const PARTICULIER = {
+  "sjbagb": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} }
+};
+const PX = PARTICULIER[String(Q.get("cse")||"").toLowerCase()] || {};
 const escM = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 function showMessage(titre, texte){
@@ -324,7 +329,9 @@ function startOrder(DATA){
   document.title = "Commande – " + DATA.cse.nom;
 const IMG = DATA.images;
 const CSE = DATA.cse;
-const CARTON = Object.assign({"33":12,"75":6,"soft":12}, DATA.carton||{});
+const CARTON = Object.assign({"33":12,"75":6,"soft":12}, DATA.carton||{}, PX.carton||{});
+const BOUTIQUE = Object.assign({}, DATA.boutique||{}, PX.boutique||{});
+const pBout = (b,f) => f!=="75" && b.g!=="soft" ? (BOUTIQUE[b.g]||0) : 0;
 const F = Object.assign({b33:true,b75:true,soft:false,box:true}, DATA.formats||{});
 const QUI = CSE.qui || "votre CSE", ISCSE = QUI==="votre CSE";
 const RG = DATA.rgpd;
@@ -397,7 +404,7 @@ function homeHtml(){
   ${(CSE.retrait||CSE.lieu||CSE.creneau||CSE.paiement||CSE.contact)?`<section class="card"><p class="note" style="margin:0;line-height:1.7">${CSE.retrait?`<b>Livraison :</b> ${esc(CSE.retrait)}${CSE.lieu?", "+esc(CSE.lieu):""}<br>`:(CSE.lieu?`<b>Lieu de retrait :</b> ${esc(CSE.lieu)}<br>`:"")}${CSE.creneau?`<b>Créneau :</b> ${esc(CSE.creneau)}<br>`:""}${CSE.paiement?`<b>Paiement :</b> ${esc(CSE.paiement)}<br>`:""}${CSE.contact?`<b>Contact :</b> ${esc(CSE.contact)}`:""}</p></section>`:""}
   <ol class="how">
     <li><span class="n">1</span><p><b>Indiquez votre nom</b><small>Pour que ${ISCSE?"le CSE":"l’organisateur"} retrouve votre commande à la livraison.</small></p></li>
-    <li><span class="n">2</span><p><b>Choisissez vos ${F.b33||F.b75?"bières":"coffrets"}${(F.b33||F.b75)&&F.box?" et coffrets":""}</b><small>${[F.b33?"33 cl par cartons de 12":"",F.b75?"75 cl par cartons de 6":"",F.soft?"softs dans les mêmes cartons de 12 que les bières 33 cl":""].filter(Boolean).join(", ")}${F.b33||F.b75?(F.soft?". Vous pouvez mélanger bières et softs dans un carton.":". Vous pouvez mélanger les bières dans un carton."):""}</small></p></li>
+    <li><span class="n">2</span><p><b>Choisissez vos ${F.b33||F.b75?"bières":"coffrets"}${(F.b33||F.b75)&&F.box?" et coffrets":""}</b><small>${[F.b33?`33 cl par cartons de ${CARTON["33"]}`:"",F.b75?`75 cl par cartons de ${CARTON["75"]}`:"",F.soft?`softs dans les mêmes cartons de ${CARTON["33"]} que les bières 33 cl`:""].filter(Boolean).join(", ")}${F.b33||F.b75?(F.soft?". Vous pouvez mélanger bières et softs dans un carton.":". Vous pouvez mélanger les bières dans un carton."):""}</small></p></li>
     <li><span class="n">3</span><p><b>Validez</b><small>Vous recevez un récapitulatif par e-mail. Le règlement se fait à la livraison.</small></p></li>
   </ol>
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
@@ -466,7 +473,7 @@ function beerRow(b,f){
   return `<article class="beer${q?" has":""}" style="--c:${b.c}">
     <div class="plate" data-info="${b.id}" role="button" tabindex="0" aria-label="Voir la fiche ${esc(b.n)}">${plateImg(b)}</div>
     <div class="info"><button class="name" data-info="${b.id}">${esc(b.n)}</button>
-      <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}</span>
+      <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}${pBout(b,f)>price(b,f)?` <span class="old">${eur(pBout(b,f))}</span>`:""}</span>${pBout(b,f)>price(b,f)?`<span class="save">${eur(pBout(b,f)-price(b,f))} d’économie</span>`:""}
       ${pastille(b)?`<span style="margin-top:3px">${pastille(b,true).replace("pas ","pas ").replace('class="pas','style="margin-left:0" class="pas')}</span>`:""}<button type="button" class="fl" data-info="${b.id}">Voir la fiche ›</button></div>
     <div class="stepper"><div class="row">
       <button class="sbtn" data-dec="${b.id}" data-f="${f}" aria-label="Retirer une ${esc(b.n)}" ${q?"":"disabled"}>−</button>
@@ -495,7 +502,7 @@ function bieresHtml(){
   } else {
     const grp = g => BEERS.filter(b=>b.g===g);
     if(f==="soft") body = cartonHtml(f) + `<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, dans le même carton que les bières 33 cl</span></div><div class="list">${SOFTS().map(b=>beerRow(b,f)).join("")}</div>`;
-    else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${eur(groupPrice(g,f))} la bouteille</span></div>
+    else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${(BOUTIQUE[g]&&f!=="75"&&BOUTIQUE[g]>groupPrice(g,f))?`<s style="color:var(--muted);font-weight:400">${eur(BOUTIQUE[g])}</s> `:""}${eur(groupPrice(g,f))} la bouteille</span></div>
       <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("")
       + (f==="33"&&F.soft&&SOFTS().length&&!TABS().some(x=>x[0]==="soft")?`<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, dans le même carton</span></div><div class="list">${SOFTS().map(b=>beerRow(b,"soft")).join("")}</div>`:"");
   }
@@ -542,10 +549,10 @@ function recapHtml(){
   return `${demo}${topBar("recap")}<h2>Vérifiez votre commande</h2>
   <section class="card"><h3>Vous<button data-goto="vous">Modifier</button></h3>
     <dl class="who"><dt>Nom</dt><dd>${esc(p.prenom)} ${esc(p.nom)}</dd><dt>E-mail</dt><dd style="overflow-wrap:anywhere">${esc(p.email)}</dd>${p.service?`<dt>Service</dt><dd>${esc(p.service)}</dd>`:""}${p.tel?`<dt>Téléphone</dt><dd>${esc(p.tel)}</dd>`:""}<dt>Vente</dt><dd>${esc(CSE.nom)}</dd></dl></section>
-  ${n33?sec(`33 cl · ${plural(n33,"bouteille")}${count("soft")?"":" · "+plural(n33/12,"carton")}`,recapLines("33"),"33"):""}
-  ${n75?sec(`75 cl · ${plural(n75/6,"carton")}`,recapLines("75"),"75"):""}
+  ${n33?sec(`33 cl · ${plural(n33,"bouteille")}${count("soft")?"":" · "+plural(n33/CARTON["33"],"carton")}`,recapLines("33"),"33"):""}
+  ${n75?sec(`75 cl · ${plural(n75/CARTON["75"],"carton")}`,recapLines("75"),"75"):""}
   ${count("soft")?sec(`Softs · ${plural(count("soft"),"bouteille")}`,recapLines("soft"),"soft"):""}
-  ${count("soft")?`<p class="note" style="margin:-4px 2px 0">${plural((n33+count("soft"))/12,"carton")} de 33 cl, bières et softs mélangés.</p>`:""}
+  ${count("soft")?`<p class="note" style="margin:-4px 2px 0">${plural((n33+count("soft"))/CARTON["33"],"carton")} de 33 cl, bières et softs mélangés.</p>`:""}
   ${nb?sec(`Coffrets · ${nb}`,S.boxes.map((x,i)=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${esc(boxLabel(x,i))}<br><small>${x.mode==="assort"?"Assortiment de la brasserie":"Sur mesure : "+esc(pickText(x))}</small></span><span>${eur(BT(x.t).p)}</span></div>`).join(""),"box"):""}
   <div class="tot"><span>Total</span><span>${eur(total())}</span></div>
   ${nb?`<p class="note">Dont ${eur(boxSaving())} d’économie sur les coffrets.</p>`:""}
@@ -673,6 +680,7 @@ function startSuivi(D, info){
   document.getElementById("cssPage").media = "not all";
   document.getElementById("cssSuivi").media = "all";
   document.title = "Suivi – " + D.cse.nom;
+const CARTON = Object.assign({"33":12,"75":6,"soft":12}, D.carton||{}, PX.carton||{});
 const eur = v => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 const esc = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const t33 = D.beers.reduce((a,b)=>a+b.q33,0), t75 = D.beers.reduce((a,b)=>a+b.q75,0), tb = D.boxes.reduce((a,b)=>a+b.q,0);
@@ -688,8 +696,8 @@ document.getElementById("app").innerHTML = `<main>
   <div class="kpis">
     <div class="kpi"><b>${D.orders.length}</b><span>commande${D.orders.length>1?"s":""}</span></div>
     <div class="kpi"><b>${eur(total)}</b><span>montant total</span></div>
-    <div class="kpi"><b>${t33}</b><span>bouteilles 33 cl · ${(t33/12).toLocaleString("fr-FR")} carton${t33/12>1?"s":""}</span></div>
-    <div class="kpi"><b>${t75}</b><span>bouteilles 75 cl · ${(t75/6).toLocaleString("fr-FR")} carton${t75/6>1?"s":""}</span></div>
+    <div class="kpi"><b>${t33}</b><span>bouteilles 33 cl · ${(t33/CARTON["33"]).toLocaleString("fr-FR")} carton${t33/CARTON["33"]>1?"s":""}</span></div>
+    <div class="kpi"><b>${t75}</b><span>bouteilles 75 cl · ${(t75/CARTON["75"]).toLocaleString("fr-FR")} carton${t75/CARTON["75"]>1?"s":""}</span></div>
     ${D.boxes.length?`<div class="kpi"><b>${tb}</b><span>coffret${tb>1?"s":""} cadeau${tb>1?"x":""}</span></div>`:""}
   </div>
   <section class="card"><h2>Par bière</h2><div class="scroll"><table>
