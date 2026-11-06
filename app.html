@@ -562,7 +562,7 @@ function recapHtml(){
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
 }
 function doneHtml(){
-  return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${result?result.numero:""} enregistrée</span>
+  return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${result?(result.nv||result.numero):""} enregistrée</span>
   <h1>Merci ${esc(S.person.prenom)} !</h1>
   <p class="lead">Votre commande de ${eur(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. ${CSE.ha?"Il ne vous reste plus qu’à la régler en ligne.":`Vous la réglerez au moment de la livraison, auprès de ${QUI}.`}</p>
   ${CSE.ha?`<button class="cta" data-hapay="${result?result.numero:""}">Payer ${eur(result?result.total:total())} sur HelloAsso</button><p class="note">Paiement sécurisé sur la page HelloAsso de l’organisateur.</p>`:""}
@@ -573,15 +573,15 @@ function doneHtml(){
 /* Paiement HelloAsso */
 function haPost(o){ return fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({cse:Q.get("cse")},o))}).then(r=>r.json()); }
 function haGo(n){ const b=document.querySelector("[data-hapay]"); if(b){ b.disabled=true; b.textContent="Redirection vers HelloAsso…"; }
-  haPost({action:"haPay",n,page:location.origin+location.pathname}).then(r=>{ if(r.ok&&r.url) location.href=r.url; else if(r.ok&&r.paid) haShow(n,true); else haShow(n,false,r.error); }).catch(()=>haShow(n,false,"Connexion impossible pour le moment. Réessayez dans quelques instants.")); }
-function haShow(n,paid,msg){ const bar=$("#bar"); if(bar) bar.hidden=true; const nn=esc(String(n||""));
-  $("#app").innerHTML=`${topBar()}<section class="done"><span class="stamp">Commande n°${nn}</span>
+  haPost({action:"haPay",n,page:location.origin+location.pathname}).then(r=>{ if(r.ok&&r.url) location.href=r.url; else if(r.ok&&r.paid) haShow(n,true,"",r.nv); else haShow(n,false,r.error,r.nv); }).catch(()=>haShow(n,false,"Connexion impossible pour le moment. Réessayez dans quelques instants.")); }
+function haShow(n,paid,msg,nv){ const bar=$("#bar"); if(bar) bar.hidden=true; const nn=esc(String(n||"")), nd=esc(String(nv||n||""));
+  $("#app").innerHTML=`${topBar()}<section class="done"><span class="stamp">Commande n°${nd}</span>
   <h1>${paid?"Paiement reçu, merci !":"Paiement non finalisé"}</h1>
-  <p class="lead">${paid?`Votre commande n°${nn} est réglée. HelloAsso vous envoie aussi un reçu par e-mail.`:esc(msg||"Le paiement n’a pas abouti. Votre commande est bien enregistrée : vous pouvez réessayer de la régler en ligne.")}</p>
+  <p class="lead">${paid?`Votre commande n°${nd} est réglée. HelloAsso vous envoie aussi un reçu par e-mail.`:esc(msg||"Le paiement n’a pas abouti. Votre commande est bien enregistrée : vous pouvez réessayer de la régler en ligne.")}</p>
   ${paid?"":`<button class="cta" data-hapay="${nn}">Payer ma commande sur HelloAsso</button>`}
   <p class="note"><a href="?cse=${encodeURIComponent(Q.get("cse")||"")}">Revenir à la page de commande</a></p></section>`; }
 function haReturn(){ const n=Q.get("ha"); const bar=$("#bar"); if(bar) bar.hidden=true; $("#app").innerHTML=`${topBar()}<section class="done"><h1>Vérification du paiement…</h1></section>`;
-  haPost({action:"haCheck",n}).then(r=>haShow(n,!!(r.ok&&r.paid),r.ok?"":r.error)).catch(()=>haShow(n,false,"Vérification impossible pour le moment. Rechargez la page dans quelques instants.")); }
+  haPost({action:"haCheck",n}).then(r=>haShow(n,!!(r.ok&&r.paid),r.ok?"":r.error,r.nv)).catch(()=>haShow(n,false,"Vérification impossible pour le moment. Rechargez la page dans quelques instants.")); }
 window.haReturn=haReturn;
 
 function renderBar(){
@@ -716,7 +716,7 @@ document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
   const o = D.orders.find(x=>String(x.n)===b.dataset.del);
   const bg = document.createElement("div"); bg.className="dlg-bg";
   bg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
-    <h3 id="dlgT">Supprimer la commande n°${esc(o.n)} ?</h3>
+    <h3 id="dlgT">Supprimer la commande n°${esc(o.nv||o.n)} ?</h3>
     <p><b>${esc(o.prenom)} ${esc(o.nom)}</b> · ${eur(o.montant)}<br><span class="det">${esc(o.detail)}</span></p>
     <p>Cette commande ne sera plus comptée ni préparée. La brasserie en sera prévenue.</p>
     <p class="err" hidden style="color:var(--warn);font-weight:700"></p>
@@ -730,7 +730,7 @@ document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
     fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify({action:"supprimer",cse:Q.get("cse"),cle:Q.get("cle"),n:o.n})})
       .then(r=>r.json())
-      .then(r=>{ if(r&&r.ok){ close(); startSuivi(r.data, "Commande n°"+o.n+" de "+o.prenom+" "+o.nom+" supprimée."); scrollTo(0,0); }
+      .then(r=>{ if(r&&r.ok){ close(); startSuivi(r.data, "Commande n°"+(o.nv||o.n)+" de "+o.prenom+" "+o.nom+" supprimée."); scrollTo(0,0); }
                  else { err.textContent=(r&&r.error)||"La suppression n’a pas pu se faire."; err.hidden=false; yes.disabled=false; yes.textContent="Oui, supprimer"; } })
       .catch(()=>{ err.textContent="Connexion impossible. Vérifiez votre connexion puis réessayez."; err.hidden=false; yes.disabled=false; yes.textContent="Oui, supprimer"; });
   };
