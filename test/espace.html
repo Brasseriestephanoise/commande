@@ -171,7 +171,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 const num = s => { const n = parseFloat(String(s).replace(",", ".").replace(/[^\d.-]/g, "")); return isNaN(n) ? null : n; };
 const fx = v => v == null ? "" : Number(v).toFixed(2).replace(".", ",");
 const sfx4 = () => { const c="abcdefghjkmnpqrstuvwxyz23456789"; let r=""; for(let i=0;i<4;i++) r+=c[Math.floor(Math.random()*c.length)]; return r; };
-const codeVente = (nom,o) => { const b=slug(nom).slice(0,34); if(!b) return ""; o.sfx=o.sfx||sfx4(); return b+"-"+o.sfx; };
+const codeVente = (nom,o) => { const b=slug(nom).slice(0,34).replace(/-+$/,""); if(!b) return ""; o.sfx=o.sfx||sfx4(); return b+"-"+o.sfx; };
 const slug = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 function toast(t){ const h=$("#toastHost"); h.innerHTML=`<div class="toast" role="status">${esc(t)}</div>`; clearTimeout(toast.t); toast.t=setTimeout(()=>h.innerHTML="",3000); }
 function copy(t){ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Lien copié")).catch(()=>toast("Copie impossible : sélectionne le lien à la main")); }
