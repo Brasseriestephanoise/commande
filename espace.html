@@ -170,6 +170,8 @@ const daysTo = s => Math.round((new Date(s + "T12:00") - TODAY) / 864e5);
 const clone = o => JSON.parse(JSON.stringify(o));
 const num = s => { const n = parseFloat(String(s).replace(",", ".").replace(/[^\d.-]/g, "")); return isNaN(n) ? null : n; };
 const fx = v => v == null ? "" : Number(v).toFixed(2).replace(".", ",");
+const sfx4 = () => { const c="abcdefghjkmnpqrstuvwxyz23456789"; let r=""; for(let i=0;i<4;i++) r+=c[Math.floor(Math.random()*c.length)]; return r; };
+const codeVente = (nom,o) => { const b=slug(nom).slice(0,34).replace(/-+$/,""); if(!b) return ""; o.sfx=o.sfx||sfx4(); return b+"-"+o.sfx; };
 const slug = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 function toast(t){ const h=$("#toastHost"); h.innerHTML=`<div class="toast" role="status">${esc(t)}</div>`; clearTimeout(toast.t); toast.t=setTimeout(()=>h.innerHTML="",3000); }
 function copy(t){ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Lien copié")).catch(()=>toast("Copie impossible : sélectionne le lien à la main")); }
@@ -689,7 +691,7 @@ document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset; i
   if(d.np){ S.newProd[d.np]=el.value; if(d.np==="cat") render(); return; }
   if(el.id==="saveAs"&&S.draft) S.draft.saveAs=el.checked; });
 document.addEventListener("input",e=>{ const el=e.target; if(S.view==="vente") S.typed=true;
-  if(el.dataset.d){ const o=S.view==="nouvelle"?S.draft:S.edit; o[el.dataset.d]=el.value; if(S.view==="nouvelle"&&el.dataset.d==="nom"){ o.code=slug(el.value); const c=$("#d-code"); if(c) c.value=o.code; } }
+  if(el.dataset.d){ const o=S.view==="nouvelle"?S.draft:S.edit; o[el.dataset.d]=el.value; if(S.view==="nouvelle"&&el.dataset.d==="nom"){ o.code=codeVente(el.value,o); const c=$("#d-code"); if(c) c.value=o.code; } }
   if(el.dataset.g&&S.gedit) S.gedit[el.dataset.g]=el.value;
   if(el.dataset.np&&S.newProd) S.newProd[el.dataset.np]=el.value;
   if(el.dataset.cf&&S.catEdit&&S.catEdit[el.dataset.cf]) S.catEdit[el.dataset.cf][el.dataset.fk]=el.type==="checkbox"?(el.checked?"Nouveau":""):el.value;
