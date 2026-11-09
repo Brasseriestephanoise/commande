@@ -339,7 +339,7 @@ const BEERS = DATA.beers.map(b=>Object.assign(b,{c:(/^#2[0-3]1[ef]2[0-1]$/i.test
 const BOXES = DATA.boxes;
 const range = arr => { const mn=Math.min(...arr), mx=Math.max(...arr); return mn===mx?eur(mn):eur(mn).replace(" €","")+" – "+eur(mx); };
 const groupPrice = (g,f) => { const b=BEERS.find(x=>x.g===g); return b?price(b,f):0; };
-const S = {screen:"home", tab:"33", person:{nom:"",prenom:"",service:"",tel:"",email:"",news:false}, q:{"33":{},"75":{},"soft":{}}, boxes:[], compose:null, errors:{}};
+const S = {screen:"home", tab:"33", person:{nom:"",prenom:"",service:"",tel:"",email:"",news:false,majeur:false}, q:{"33":{},"75":{},"soft":{}}, boxes:[], compose:null, errors:{}};
 
 function eur(v){ return Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"; }
 const eur_old = v => v.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
@@ -426,8 +426,9 @@ function vousHtml(){
     ${field("email","E-mail","marie.dupont@exemple.fr",false,"email","email")}
     ${field("tel","Téléphone","06 12 34 56 78",true,"tel","tel")}
     <label class="choice" for="f-news"><input type="checkbox" id="f-news" ${S.person.news?"checked":""}><span><b>Recevoir les actualités de la brasserie</b><small>Nouvelles bières et prochaines commandes groupées. Désinscription en un clic.</small></span></label>
+    <label class="choice" for="f-majeur" style="${S.errors.majeur?"border-color:#C0392B":""}"><input type="checkbox" id="f-majeur" ${S.person.majeur?"checked":""}><span><b>Je certifie avoir 18 ans ou plus</b><small>${S.errors.majeur?"<span style=\"color:#C0392B\">"+S.errors.majeur+"</span>":"La vente d’alcool est interdite aux mineurs."}</small></span></label>
     <details class="rgpd"><summary>Vos données personnelles</summary>
-      <p>Vos coordonnées sont utilisées par La Brasserie Stéphanoise et par ${QUI} pour préparer et remettre votre commande et vous envoyer sa confirmation par e-mail. Le détail de votre commande (service, téléphone) est effacé ${RG.mois} mois après la livraison.</p>
+      <p>Vos coordonnées sont utilisées par La Brasserie Stéphanoise et par ${QUI} pour préparer et remettre votre commande, vous envoyer sa confirmation par e-mail et, jusqu’à la clôture de la vente, quelques rappels (un lien dans chaque rappel permet de ne plus les recevoir). Le détail de votre commande (service, téléphone) est effacé ${RG.mois} mois après la livraison.</p>
       <p>Votre nom et votre e-mail sont conservés dans le fichier clients de La Brasserie Stéphanoise pendant ${RG.ans} ans après votre dernière commande. Vous ne recevez nos actualités que si vous cochez la case ci-dessus, et vous pouvez vous désinscrire à tout moment.</p>
       <p>Vous pouvez à tout moment consulter, corriger ou faire supprimer vos données en écrivant à ${esc(RG.email)}. En cas de désaccord, vous pouvez saisir la CNIL (cnil.fr).</p>
     </details>
@@ -655,6 +656,7 @@ document.addEventListener("click",e=>{
     if(!S.person.prenom.trim()) S.errors.prenom="Indiquez votre prénom.";
     if(!S.person.nom.trim()) S.errors.nom="Indiquez votre nom.";
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(S.person.email.trim())) S.errors.email=S.person.email.trim()?"Cette adresse e-mail semble incomplète.":"Indiquez votre e-mail pour recevoir la confirmation.";
+    if(!S.person.majeur) S.errors.majeur="Cochez cette case pour valider votre commande.";
     if(Object.keys(S.errors).length){ render(); const f=document.getElementById("f-"+Object.keys(S.errors)[0]); f&&f.focus(); return; }
     go("bieres"); return;
   }
@@ -669,7 +671,7 @@ document.addEventListener("keydown",e=>{
 document.addEventListener("input",e=>{
   if(e.target.dataset.p){ S.person[e.target.dataset.p]=e.target.value; if(S.errors[e.target.dataset.p]){ delete S.errors[e.target.dataset.p]; e.target.closest(".field").classList.remove("err"); const m=e.target.closest(".field").querySelector(".msg"); m&&m.remove(); } }
 });
-document.addEventListener("change",e=>{ if(e.target.id==="f-news") S.person.news=e.target.checked; });
+document.addEventListener("change",e=>{ if(e.target.id==="f-news") S.person.news=e.target.checked; if(e.target.id==="f-majeur"){ S.person.majeur=e.target.checked; if(e.target.checked&&S.errors.majeur){ delete S.errors.majeur; render(); } } });
 document.addEventListener("submit",e=>e.preventDefault());
 
 S.tab=(TABS()[0]||["33"])[0];
@@ -826,6 +828,8 @@ function suiviExtras(D){
 
 if (Q.get("desinscription")) {
   api({api:"desinscription", t:Q.get("desinscription")}).then(r=>showMessage("Désinscription", r.message)).catch(OFFLINE);
+} else if (Q.get("stoprel")) {
+  api({api:"stoprel", v:Q.get("stoprel"), e:Q.get("e")||"", s:Q.get("s")||""}).then(r=>showMessage("Rappels", r.message)).catch(OFFLINE);
 } else if (!Q.get("cse")) {
   showMessage("Lien incomplet", "Ce lien de commande est incomplet. Utilisez le lien envoyé par votre CSE.");
 } else if (Q.has("cle")) {

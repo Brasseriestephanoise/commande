@@ -127,7 +127,7 @@ body.loading::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z
 .preview{border:1px dashed var(--line);border-radius:10px;padding:14px;display:grid;gap:12px}
 .dialog-bg{position:fixed;inset:0;background:rgba(20,16,12,.45);display:grid;place-items:center;z-index:15;padding:16px}
 .dialog{background:var(--surface);border-radius:12px;padding:20px;max-width:420px;width:100%;display:grid;gap:12px}
-.r1 :is([data-rsave],[data-new],[data-saveprix],[data-saveinfos],[data-close],[data-extend],[data-reopen],[data-confirmdate],[data-confirmalt],[data-create],[data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]),
+.r1 :is([data-rsave],[data-new],[data-saveprix],[data-saveinfos],[data-close],[data-extend],[data-reopen],[data-confirmdate],[data-confirmalt],[data-create],[data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod],[data-relsend],[data-reltest],[data-relauto],[data-sendd]),
 .r2 :is([data-rsave],[data-savegrid],[data-gsave],[data-gnew],[data-gdel],[data-catsave],[data-newprod]){display:none!important}
 @media (max-width:640px){h1{font-size:23px}nav.tabs{margin-left:0;width:100%}.top .wrap{gap:8px}}
 </style>
@@ -139,6 +139,7 @@ body.loading::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z
     <button type="button" data-nav="ventes">Ventes</button>
     <button type="button" data-nav="grilles">Grilles de prix</button>
     <button type="button" data-nav="catalogue">Catalogue</button>
+    <button type="button" data-nav="contacts" id="navContacts" hidden>Contacts</button>
     <button type="button" data-nav="acces" id="navAcces" hidden>Accès</button>
   </nav>
   <div id="who" class="sub" style="width:100%;text-align:right"></div>
@@ -269,7 +270,7 @@ function haCard(){ const h=S.cur.ha||{};
     <p class="note" style="margin:6px 0 0">${!h.allow?"L’organisateur ne voit pas l’option.":h.on?`Activé par l’organisateur${h.slug?" · "+esc(h.slug):""}${h.env==="prod"?"":" · compte de test"} : les acheteurs paient en ligne et les commandes se cochent « payé » toutes seules.`:"Option proposée : l’organisateur l’active lui-même depuis son lien de suivi, avec la clé API de son compte HelloAsso (Mon Compte › Intégration et API). La brasserie n’a jamais accès à cette clé."}</p></section>`; }
 function vVente(){
   const C = S.cur, v = C.vente, cf = C.config, st = status(v), t = totals();
-  const tabs = [["apercu","Aperçu"],["infos","Infos"],["produits","Produits et prix"],["commandes","Commandes ("+C.orders.length+")"],["exports","Récaps"]];
+  const tabs = [["apercu","Aperçu"],["infos","Infos"],["produits","Produits et prix"],["commandes","Commandes ("+C.orders.length+")"],["exports","Récaps"],["mails","Mails et relances"]];
   let body = "";
   if (S.tab==="apercu") body = `<div class="sum">
       ${cf.resale?`<div><b>${eur(t.enc)}</b><span>payé par les acheteurs</span></div><div class="hl"><b>${eur(t.fac)}</b><span>à facturer à l’organisateur</span></div><div><b>${eur(t.enc-t.fac)}</b><span>marge de l’organisateur</span></div>`
@@ -279,7 +280,7 @@ function vVente(){
     <section class="card"><h2>Liens</h2><div class="links">
       <div class="link"><div class="l"><b>Lien à diffuser</b> <span class="sub">${cf.resale?"aux adhérents / parents":"aux salariés"}</span><code>${esc(venteUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(venteUrl(v))}">Copier</button></div>
       <div class="link"><div class="l"><b>Lien du responsable</b> <span class="sub">suivi des commandes, à ne pas diffuser</span><code>${esc(suiviUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(suiviUrl(v))}">Copier</button></div>
-    </div></section>
+    </div>${v.email?`<div class="bar"><button class="btn small" type="button" data-relsend="D">Envoyer les liens à l’organisateur par e-mail</button><span class="note">Mail d’ouverture : liens, QR code, message prêt à transférer.</span></div>`:""}</section>
     <section class="card"><h2>Informations</h2><div class="grid2">
       <div><div class="sub">Responsable</div>${esc(v.resp||"–")}<div class="sub" style="margin-top:2px">${esc(v.email||"")} ${esc(v.tel||"")}</div></div>
       <div><div class="sub">Date limite</div>${dfr(v.limite)}${v.limite?" · 23 h 59":""}</div>
@@ -298,6 +299,7 @@ function vVente(){
   if (S.tab==="commandes") body = `<section class="card"><div class="scroll"><table><thead><tr><th class="num">N°</th><th>Nom</th><th>Service</th><th>Détail</th><th class="num">${cf.resale?"Payé par l’acheteur":"Montant"}</th>${cf.resale?'<th class="num">Prix brasserie</th>':""}</tr></thead>
     <tbody>${C.orders.map(o=>`<tr><td class="num">${o.n}</td><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><div class="sub">${esc(o.date)}</div></td><td class="muted">${esc(o.service)}</td><td class="sub">${detail(o)}</td><td class="num">${eur(o.montant)}</td>${cf.resale?`<td class="num">${eur(o.montantB==null?o.montant:o.montantB)}</td>`:""}</tr>`).join("") || `<tr><td colspan="6" class="muted">Aucune commande pour l’instant.</td></tr>`}</tbody></table></div></section>`;
   if (S.tab==="exports") body = vExports();
+  if (S.tab==="mails") body = vMails();
   return `<div><button class="back" type="button" data-nav="ventes">← Toutes les ventes</button></div>
   <div class="head"><div><h1>${esc(v.nom)}</h1><p><span class="pill ${st.k}">${st.t}</span> <span class="muted">${v.limite?"· clôture le "+dfr(v.limite):""}</span></p></div>
     <div class="bar">${!v.ouvert?`<button class="btn" type="button" data-reopen>Rouvrir</button>`:`${v.limite?`<button class="btn" type="button" data-extend>Prolonger d’une semaine</button>`:""}<button class="btn" type="button" data-close>Fermer la vente</button>`}</div></div>
@@ -492,6 +494,7 @@ function vNouvelle(){
     <label class="bar" style="font-size:14px"><input type="checkbox" id="saveAs" ${d.saveAs?"checked":""}> Enregistrer aussi ces prix comme nouvelle grille, nommée
       <input class="price" style="width:220px;text-align:left" id="saveName" placeholder="Ex. Clubs sportifs" value="${esc(d.saveName||"")}"></label>
   </section>
+  <label class="bar" style="font-size:14px" data-sendd><input type="checkbox" id="sendD" ${d.sendD===false?"":"checked"}> Envoyer à l’organisateur le mail d’ouverture (liens, dates, QR code, message prêt à transférer)</label>
   <div class="bar"><button class="btn primary" type="button" data-create>Créer la vente et les liens</button><button class="btn" type="button" data-nav="ventes">Annuler</button></div>`;
 }
 
@@ -550,6 +553,37 @@ function newProdHtml(){ const n=S.newProd;
   <p class="note">Le nouveau produit est disponible tout de suite dans la grille CSE classique. Pour les autres grilles et ventes, active-le dans leurs produits.</p></section>`; }
 function resizeImg(file){ return new Promise((ok,ko)=>{ const r=new FileReader(); r.onload=()=>{ const im=new Image(); im.onload=()=>{ const H=130, W=Math.round(im.width*H/im.height); const c=document.createElement("canvas"); c.width=Math.min(W,200); c.height=H; c.getContext("2d").drawImage(im,0,0,c.width,H); let u=c.toDataURL("image/png"); if(u.length>40000) u=c.toDataURL("image/jpeg",.85); ok(u); }; im.onerror=ko; im.src=r.result; }; r.onerror=ko; r.readAsDataURL(file); }); }
 
+const REL_T={D:["Ouverture de la vente","à l’organisateur",""],A:["Point d’étape","à l’organisateur","auto le mardi 9 h 30"],B:["Rappel aux clients","aux clients qui ont commandé","auto le jeudi 12 h 15"],C:["Dernière chance","à l’organisateur et aux clients","auto 2 jours avant la fin, 10 h"]};
+function vMails(){ const v=S.cur.vente, R=v.rel||{off:false,log:{},stop:0}, L=R.log||{};
+  const line=t=>{ const [lab,dest,auto]=REL_T[t], l=L[t];
+    return `<div class="link"><div class="l"><b>${lab}</b> <span class="sub">${dest}</span><div class="sub">${l?"Dernier envoi : "+esc(l.le)+" · "+l.n+" e-mail"+(l.n>1?"s":""):"Jamais envoyé"}${auto&&!R.off?" · "+auto:""}</div></div>
+      <div class="bar"><button class="btn small" type="button" data-relprev="${t}">Aperçu</button><button class="btn small" type="button" data-reltest="${t}">M’envoyer un test</button><button class="btn small primary" type="button" data-relsend="${t}">Envoyer</button></div></div>`; };
+  return `<section class="card"><h2>Relances automatiques</h2>
+    <label class="bar" style="font-size:14px"><input type="checkbox" data-relauto ${R.off?"":"checked"}> Envoyer les relances automatiques pour cette vente</label>
+    <p class="note">Point d’étape à l’organisateur le mardi à 9 h 30, rappel aux clients le jeudi à 12 h 15, « dernière chance » à tous 2 jours avant la date limite à 10 h. Rien les 5 premiers jours après l’ouverture, ni après la clôture.${R.stop?` <b>${R.stop}</b> client${R.stop>1?"s ont":" a"} demandé à ne plus recevoir de rappels.`:""}</p></section>
+  <section class="card"><h2>Mails</h2><div class="links">${["D","A","B","C"].map(line).join("")}</div>
+    ${v.email?"":`<p class="note" style="color:var(--warn)">Pas d’e-mail pour l’organisateur : renseigne-le dans l’onglet Infos.</p>`}
+    <p class="note">« M’envoyer un test » t’envoie le mail à toi seul, avec [TEST] dans l’objet.</p></section>
+  ${S.relPrev?`<section class="card"><div class="head"><div><h2>Aperçu</h2><p class="note">Objet : <b>${esc(S.relPrev.subject)}</b></p></div><button class="btn small" type="button" data-relclose>Fermer</button></div><iframe title="Aperçu du mail" srcdoc="${esc('<!doctype html><meta charset=utf-8><body style="margin:0">'+S.relPrev.html)}" style="width:100%;height:1100px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe></section>`:""}`;
+}
+function vContacts(){
+  const C=S.contacts;
+  const head=`<div class="head"><div><h1>Contacts</h1><p class="muted">Les acheteurs des ventes groupées. Données personnelles : réservé à la brasserie.</p></div>`;
+  if(!C) return head+`</div><p class="muted">Chargement…</p>`;
+  const f=S.cf||"tous", L=C.list.filter(x=>f==="tous"||(x.news&&!x.desinscritLe));
+  const nAb=C.list.filter(x=>x.news&&!x.desinscritLe).length;
+  return head+`<div class="bar"><button class="btn" type="button" data-ccsv>Exporter (Excel / CSV)</button>${C.brevo?`<button class="btn" type="button" data-cbrevo>Envoyer les abonnés vers Brevo</button>`:""}</div></div>
+  <div class="kpis"><div class="kpi"><b>${C.list.length}</b><span>contacts</span></div><div class="kpi"><b>${nAb}</b><span>abonnés aux actualités</span></div></div>
+  <div class="seg" role="group" aria-label="Filtre"><button type="button" data-cf="tous" aria-pressed="${f==="tous"}">Tous</button><button type="button" data-cf="news" aria-pressed="${f==="news"}">Abonnés aux actualités</button></div>
+  <section class="card"><div class="scroll"><table><thead><tr><th>Nom</th><th>E-mail</th><th>Dernière vente</th><th class="num">Commandes</th><th class="num">Dernière commande</th><th>Actualités</th></tr></thead>
+  <tbody>${L.map(x=>`<tr><td><b>${esc(x.prenom)} ${esc(x.nom)}</b></td><td class="sub">${esc(x.email)}</td><td>${esc(x.vente)}</td><td class="num">${x.n}</td><td class="num">${esc(x.derniere)}</td><td>${x.news&&!x.desinscritLe?'<span class="pill open">Oui</span>':x.desinscritLe?'<span class="sub">Désinscrit le '+esc(x.desinscritLe)+'</span>':'<span class="sub">Non</span>'}</td></tr>`).join("")||`<tr><td colspan="6" class="muted">Aucun contact.</td></tr>`}</tbody></table></div></section>
+  <p class="note">Seuls les abonnés ont accepté de recevoir tes mailings (case cochée lors de la commande). Les autres contacts ne reçoivent que les mails liés à leur commande. Les contacts sont effacés automatiquement après la durée prévue dans les Réglages.</p>`;
+}
+function contactsCsv(){ const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"', f=S.cf||"tous";
+  const L=S.contacts.list.filter(x=>f==="tous"||(x.news&&!x.desinscritLe));
+  const rows=[["E-mail","Prénom","Nom","Dernière vente","Première commande","Dernière commande","Nombre de commandes","Abonné actualités","Consentement le","Désinscrit le"]].concat(L.map(x=>[x.email,x.prenom,x.nom,x.vente,x.premiere,x.derniere,x.n,x.news&&!x.desinscritLe?"Oui":"Non",x.newsLe,x.desinscritLe]));
+  const blob=new Blob([String.fromCharCode(65279)+rows.map(r=>r.map(q).join(";")).join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="contacts-"+(f==="news"?"abonnes-":"")+new Date().toISOString().slice(0,10)+".csv"; document.body.appendChild(a); a.click(); a.remove(); }
 function render(){
   document.querySelector("nav.tabs").hidden = S.view==="login";
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",(b.dataset.nav===S.view||((S.view==="vente"||S.view==="nouvelle")&&b.dataset.nav==="ventes"))?"page":"false"));
@@ -557,9 +591,10 @@ function render(){
   if(S.view!=="login" && !D){ a.innerHTML=`<p class="muted">Chargement…</p>`; return; }
   const role=D&&D.me?D.me.role:""; document.body.className="r"+({admin:4,gestion:3,commercial:2,lecture:1}[role]||0);
   const na=document.getElementById("navAcces"); if(na) na.hidden=role!=="admin";
+  const nc=document.getElementById("navContacts"); if(nc) nc.hidden=!(role==="admin"||role==="gestion");
   const who=document.getElementById("who"); if(who) who.innerHTML=S.view!=="login"&&D&&D.me?`${esc(D.me.email)} · ${ROLE_LAB[role]||role} · <button class="back" type="button" data-logout>Se déconnecter</button>`:"";
   setTimeout(()=>{ if(S.view==="login") gisButton(); },0);
-  a.innerHTML = S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():vCatalogue();
+  a.innerHTML = S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():S.view==="contacts"?vContacts():vCatalogue();
 }
 function scopeObj(scope){ return scope==="draft"?S.draft:scope==="vente"?S.edit:S.gedit; }
 const RULE0={mode:"eur",eur:{c33:1,c75:2,s33:1,s75:2,so:.8,bx:4},pct:{c33:50,c75:40,s33:40,s75:40,so:35,bx:20}};
@@ -584,10 +619,19 @@ document.addEventListener("click",e=>{
   if(d.acadd!==undefined){ const em=$("#ac-email").value.trim(), ro=$("#ac-role").value; if(!em){ toast("Indique l’adresse Google"); return; } run("",async()=>{ const r=await api("saveAcces",{email:em,role:ro}); S.acces=r.acces; render(); toast("Accès donné à "+em); }); return; }
   if(d.acdel){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const r=await api("saveAcces",{email:d.acdel,role:""}); S.acces=r.acces; render(); toast("Accès retiré"); }); return; }
   if(d.login!==undefined){ const m=($("#lk").value.match(/k=([A-Za-z0-9]+)/)||[])[1]; if(!m){ toast("Ce lien ne contient pas de clé (#k=…)"); return; } KEY=m; try{localStorage.setItem("bs_espace_k",m);}catch(err){} S.view="ventes"; run("",async()=>{await load(); render();}); return; }
-  if(d.nav){ go(d.nav,{gedit:null,newProd:null,catEdit:d.nav==="catalogue"?catInit():S.catEdit}); return; }
+  if(d.nav&&d.nav!=="contacts"){ go(d.nav,{gedit:null,newProd:null,catEdit:d.nav==="catalogue"?catInit():S.catEdit}); return; }
   if(d.refresh!==undefined){ run("",async()=>{await load(); render(); toast("À jour");}); return; }
   if(d.open){ run("",()=>openVente(d.open)); return; }
-  if(d.vtab){ S.tab=d.vtab; render(); return; }
+  if(d.vtab){ S.tab=d.vtab; S.relPrev=null; render(); return; }
+  if(d.relprev){ run("",async()=>{ const j=await api("relApercu",{code:S.cur.vente.code,type:d.relprev}); S.relPrev=j.data; render(); }); return; }
+  if(d.relclose!==undefined){ S.relPrev=null; render(); return; }
+  if(d.reltest){ run("",async()=>{ const j=await api("relEnvoi",{code:S.cur.vente.code,type:d.reltest,test:true}); toast("Test envoyé à "+(j.to||"toi")); }); return; }
+  if(d.relsend){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent=d.relsend==="D"||d.relsend==="A"?"Confirmer l’envoi à l’organisateur":"Confirmer l’envoi"; return; }
+    run("",async()=>{ const j=await api("relEnvoi",{code:S.cur.vente.code,type:d.relsend}); setCur(j.data); render(); toast(j.n?j.n+" e-mail"+(j.n>1?"s":"")+" envoyé"+(j.n>1?"s":""):"Aucun e-mail à envoyer"); }); return; }
+  if(d.nav==="contacts"){ go("contacts"); S.contacts=null; render(); run("",async()=>{ const r=await api("contacts"); S.contacts={list:r.contacts,brevo:r.brevo}; render(); }); return; }
+  if(d.cf){ S.cf=d.cf; render(); return; }
+  if(d.ccsv!==undefined){ contactsCsv(); return; }
+  if(d.cbrevo!==undefined){ run("",async()=>{ const r=await api("brevoSync"); toast(r.n+" abonné"+(r.n>1?"s":"")+" sur "+r.total+" envoyé"+(r.n>1?"s":"")+" vers Brevo"); }); return; }
   if(d.exp){ S.exp=d.exp; render(); return; }
   if(d.xls){ xls(d.xls); return; }
   if(d.copy){ copy(d.copy); return; }
@@ -610,7 +654,7 @@ document.addEventListener("click",e=>{
   if(d.create!==undefined){ const x=S.draft; if(!x.nom.trim()){ toast("Indique au moins le nom de la vente"); $("#d-nom").focus(); return; }
     run("",async()=>{ let gid=x.grille;
       if(x.saveAs&&x.saveName.trim()){ const r=await api("saveGrille",{grille:{nom:x.saveName.trim(),desc:"Créée avec la vente "+x.nom.trim()+".",resale:x.resale,formats:x.formats,prix:x.prix}}); D.grilles=r.grilles; gid=r.id; }
-      const j=await api("saveVente",{vente:venteFields(x),config:Object.assign(cfgOf(x),{grille:gid})}); setCur(j.data); go("vente",{tab:"apercu"}); toast("Vente créée : les deux liens sont prêts."); }); return; }
+      const sd=$("#sendD")?$("#sendD").checked:true; const j=await api("saveVente",{vente:venteFields(x),config:Object.assign(cfgOf(x),{grille:gid}),sendD:sd}); setCur(j.data); go("vente",{tab:"apercu"}); toast(j.dSent?"Vente créée : l’organisateur a reçu ses liens par e-mail.":"Vente créée : les deux liens sont prêts."); }); return; }
   if(d.savegrid!==undefined){ const bg=document.createElement("div"); bg.className="dialog-bg";
     bg.innerHTML=`<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dt"><h3 id="dt">Enregistrer comme grille</h3><div class="field"><label for="gname">Nom de la grille</label><input id="gname" placeholder="Ex. Clubs sportifs"></div><div class="bar"><button class="btn primary" type="button" id="gok">Enregistrer</button><button class="btn" type="button" id="gno">Annuler</button></div></div>`;
     document.body.appendChild(bg); $("#gname").focus(); $("#gno").onclick=()=>bg.remove();
@@ -631,6 +675,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr.row")){ e.preventDefault(); run("",()=>openVente(e.target.dataset.open)); } });
 document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset; if(S.view==="vente") S.typed=true;
+  if(d.relauto!==undefined){ const on=el.checked; run("",async()=>{ const j=await api("relAuto",{code:S.cur.vente.code,on}); setCur(j.data); render(); toast(on?"Relances automatiques activées":"Relances automatiques coupées pour cette vente"); }); return; }
   if(d.haallow!==undefined){ const allow=el.checked; run("",async()=>{ const j=await api("haAllow",{code:S.cur.vente.code,allow}); S.cur.ha=j.ha; render(); toast(allow?"Paiement HelloAsso proposé à l’organisateur":"Option HelloAsso retirée"); }); return; }
   if(d.acrole){ run("",async()=>{ const r=await api("saveAcces",{email:d.acrole,role:el.value}); S.acces=r.acces; render(); toast("Accès modifié"); }); return; }
   if(d.on){ scopeObj(d.scope).prix[d.on].on=el.checked; render(); return; }
