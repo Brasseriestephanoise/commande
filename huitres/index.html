@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Huîtres de Noël · La Brasserie Stéphanoise × Papytaine</title>
+<title>Commande groupée de Noël : les huîtres Papytaine · La Brasserie Stéphanoise</title>
 <meta name="description" content="Huîtres bio de la Ria d'Étel, plates et palourdes des Huîtres Papytaine. Commande jusqu'au 14 décembre, retrait à la brasserie les 23 et 24 décembre.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="La Brasserie Stéphanoise">
@@ -18,12 +18,19 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
-<style>html,body{margin:0;height:100%;background:#F7F2E8}iframe{position:fixed;inset:0;width:100%;height:100%;border:0}
-.f{font:16px Arial,sans-serif;color:#231F20;text-align:center;padding:40px 16px}.f a{color:#17936F;font-weight:700}</style>
+<style>html,body{margin:0;background:#F7F2E8}.f{font:16px Arial,sans-serif;color:#231F20;text-align:center;padding:60px 16px}.f img{width:200px;height:auto}.f a{color:#17936F;font-weight:700}
+.sp{width:34px;height:34px;margin:22px auto;border:4px solid #E6DCCC;border-top-color:#17936F;border-radius:50%;animation:r .8s linear infinite}@keyframes r{to{transform:rotate(360deg)}}</style>
 </head>
 <body>
-<noscript><div class="f"><a href="https://script.google.com/macros/s/AKfycbzgk3ScAQyIBb2YVvV3qk_FPUP74bo9TI8vncH4oKl-80GmIZhDic3N9tqr-xrhPK8/exec">Ouvrir la page de commande des huîtres de Noël</a></div></noscript>
-<iframe id="app" title="Commande des huîtres de Noël" allow="payment" referrerpolicy="no-referrer-when-downgrade"></iframe>
-<script>document.getElementById('app').src='https://script.google.com/macros/s/AKfycbzgk3ScAQyIBb2YVvV3qk_FPUP74bo9TI8vncH4oKl-80GmIZhDic3N9tqr-xrhPK8/exec'+location.search;</script>
+<div class="f" id="ld"><img src="/img/logo.png" alt="La Brasserie Stéphanoise"><div class="sp"></div>Chargement de la commande d'huîtres…</div>
+<noscript><div class="f"><a href="tel:+33981942779">Activez JavaScript ou appelez la brasserie : 09 81 94 27 79</a></div></noscript>
+<script>
+(function(){var A='https://script.google.com/macros/s/AKfycbzgk3ScAQyIBb2YVvV3qk_FPUP74bo9TI8vncH4oKl-80GmIZhDic3N9tqr-xrhPK8/exec',q=new URLSearchParams(location.search),u=A+'?api=page';
+['ref','page'].forEach(function(k){if(q.get(k))u+='&'+k+'='+encodeURIComponent(q.get(k));});
+function ko(){document.getElementById('ld').innerHTML='<img src="/img/logo.png" alt=""><p>La page n\'a pas pu se charger.</p><p><a href="'+location.href+'">Réessayer</a> · <a href="tel:+33981942779">09 81 94 27 79</a></p>';}
+fetch(u,{credentials:'omit'}).then(function(r){if(!r.ok)throw 0;return r.text();}).then(function(h){if(h.indexOf('<')<0)throw 0;document.open();document.write(h);document.close();
+document.title=q.get('page')==='cgv'?'CGV et mentions légales · Huîtres de Noël':'Commande groupée de Noël : les huîtres Papytaine · La Brasserie Stéphanoise';
+if(location.hash)setTimeout(function(){var e=document.getElementById(location.hash.slice(1));if(e)e.scrollIntoView();},60);}).catch(ko);})();
+</script>
 </body>
 </html>
