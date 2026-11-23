@@ -298,7 +298,8 @@ const Q = new URLSearchParams(location.search);
 // Réglages particuliers par vente (code de la vente) : taille de carton et prix boutique barré.
 const PARTICULIER = {
   "sjbagb": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} },
-  "basket-gargomancois-saint-maurice-wbrg": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} }
+  "basket-gargomancois-saint-maurice-wbrg": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} },
+  "asptt-plongee-saint-etienne-bieres-sete": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} }
 };
 const PX = PARTICULIER[String(Q.get("cse")||"").toLowerCase()] || {};
 const escM = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
