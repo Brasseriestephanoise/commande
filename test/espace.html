@@ -536,7 +536,9 @@ function vgCardH(){ const role=D&&D.me?D.me.role:""; if(!(role==="admin"||role==
       ${V.age!==null&&V.age>30?`<p style="color:#B45309;margin:2px 0">⚠️ La copie a plus de ${V.age>=60?Math.floor(V.age/60)+" h":V.age+" min"} : l’Espace ne répond pas.${V.age>1440?" Au-delà de 24 h, les ruptures de l’Espace ne sont plus appliquées.":""}</p>`:""}
       ${V.err?`<p style="color:#B45309;margin:2px 0">Dernière erreur : ${esc(V.err)}</p>`:""}
       ${V.rerr?`<p style="color:#B45309;margin:2px 0">Dernier envoi de réservation en échec : ${esc(V.rerr)}</p>`:""}
-      <p class="muted" style="margin:2px 0">${V.attente?V.attente+" vente(s) en attente d’envoi à l’Espace.":"Aucun envoi de réservation en attente."}</p>`;
+      <p class="muted" style="margin:2px 0">${V.attente?V.attente+" vente(s) en attente d’envoi à l’Espace.":"Aucun envoi de réservation en attente."}</p>
+      <p style="margin:2px 0"><b>Envoi des réservations à l’Espace : ${V.resOn?"activé":"coupé"}</b>${adm?` <button class="btn small" type="button" data-vgon="${V.resOn?"":"1"}">${V.resOn?"Couper":"Activer"}</button>`:""}</p>
+      ${V.okAt?`<p class="muted" style="margin:2px 0">Dernier appel réussi à l’Espace : ${esc(V.okAt)}</p>`:""}`;
   const keyH=adm?`<div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><input id="vg-key" type="password" autocomplete="off" spellcheck="false" placeholder="${V.key?"Remplacer la clé (vg_…)":"Clé VG_KEY (vg_…)"}" style="flex:1;min-width:220px"><button class="btn primary" type="button" data-vgkey>Enregistrer la clé</button></div>
     <p class="muted" style="margin:4px 0 0">La clé est vérifiée auprès de l’Espace, enregistrée côté serveur, puis plus jamais affichée.</p>`:"";
   const det=V.n?`<details style="margin-top:10px"><summary><b>Écarts de noms entre l’Espace et l’appli</b> (${(V.absentsEspace||[]).length+(V.nouveaux||[]).length+(V.noms||[]).length})</summary>
@@ -548,7 +550,7 @@ function vgCardH(){ const role=D&&D.me?D.me.role:""; if(!(role==="admin"||role==
     ${V.impact?`<details open style="margin-top:6px"><summary><b>Impact sur les ventes ouvertes</b></summary>
       <p style="margin:8px 0 0"><b>Ventes où un format disparaît</b></p>${ul(V.impact.ventes,x=>`<li>${esc(x.nom)} : ${x.formats.map(esc).join(", ")}</li>`)}
       <p style="margin:8px 0 0"><b>Commandes déjà passées contenant un format en rupture</b> (non modifiées)</p>${ul(V.impact.commandes,x=>`<li>${esc(x.vente)} · commande n°${esc(x.n)} : ${x.formats.map(esc).join(", ")}</li>`)}</details>`:""}`:"";
-  const bt=V.key?`<div class="bar" style="margin-top:10px"><button class="btn" type="button" data-vgref>Actualiser maintenant</button><button class="btn" type="button" data-vgimp>Voir l’impact sur les ventes ouvertes</button>${adm?`<button class="btn" type="button" data-vgres>Envoyer les réservations des ventes ouvertes</button>`:""}</div>`:"";
+  const bt=V.key?`<div class="bar" style="margin-top:10px"><button class="btn" type="button" data-vgref>Actualiser maintenant</button><button class="btn" type="button" data-vgimp>Voir l’impact sur les ventes ouvertes</button>${adm&&V.resOn?`<button class="btn" type="button" data-vgres>Envoyer les réservations des ventes ouvertes</button>`:""}</div>`:"";
   return `<section class="card"><h2>Liaison avec l’Espace</h2>${etat}${keyH}${bt}${det}</section>`;
 }
 function vCatalogue(){
@@ -622,8 +624,10 @@ function render(){
   const nc=document.getElementById("navContacts"); if(nc) nc.hidden=!(role==="admin"||role==="gestion");
   const who=document.getElementById("who"); if(who) who.innerHTML=S.view!=="login"&&D&&D.me?`${esc(D.me.email)} · ${ROLE_LAB[role]||role} · <button class="back" type="button" data-logout>Se déconnecter</button>`:"";
   setTimeout(()=>{ if(S.view==="login") gisButton(); },0);
-  a.innerHTML = S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():S.view==="contacts"?vContacts():vCatalogue();
+  a.innerHTML = vgBanner() + (S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():S.view==="contacts"?vContacts():vCatalogue());
 }
+function vgBanner(){ if(S.view==="login"||!D) return ""; const e=S.vg&&S.vg.key!==undefined?{bad:S.vg.bad,ok:S.vg.okAt}:(D.vgEtat||{}); if(!e||!e.bad) return "";
+  return `<section class="card" role="alert" style="background:#C0392B;color:#fff;border-color:#C0392B"><b>Liaison avec l’Espace coupée : l’Espace répond « clé invalide »</b> (depuis le ${esc(e.bad)}).<br>Dernier appel réussi : ${e.ok?esc(e.ok):"aucun"}. Les ruptures et le stock viennent de la dernière copie (24 h maximum). Recolle une clé valide dans Catalogue › Liaison avec l’Espace.</section>`; }
 function scopeObj(scope){ return scope==="draft"?S.draft:scope==="vente"?S.edit:S.gedit; }
 const RULE0={mode:"eur",eur:{c33:1,c75:2,s33:1,s75:2,so:.8,bx:4},pct:{c33:50,c75:40,s33:40,s75:40,so:35,bx:20}};
 function ruleDef(){ const d=(D&&D.ruleDef)||{}; return {mode:d.mode||RULE0.mode, eur:Object.assign({},RULE0.eur,d.eur||{}), pct:Object.assign({},RULE0.pct,d.pct||{})}; }
@@ -644,6 +648,7 @@ document.addEventListener("click",e=>{
   const t=e.target.closest("button,[data-open]"); if(!t) return; const d=t.dataset;
   if(d.logout!==undefined){ logout(); return; }
   if(d.vgkey!==undefined){ const k=($("#vg-key")||{}).value||""; if(!k.trim()){ toast("Colle d’abord la clé"); return; } run("",async()=>{ const j=await api("vgKey",{key:k.trim()}); S.vg=j.data; render(); toast("Clé enregistrée : catalogue de l’Espace copié"); }); return; }
+  if(d.vgon!==undefined){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const j=await api("vgResOn",{on:d.vgon==="1"}); S.vg=j.data; render(); toast(j.data.resOn?"Envoi des réservations activé":"Envoi des réservations coupé"); }); return; }
   if(d.vgref!==undefined){ run("",async()=>{ const j=await api("vgRefresh"); S.vg=j.data; render(); toast("Catalogue de l’Espace actualisé"); }); return; }
   if(d.vgimp!==undefined){ run("",async()=>{ const j=await api("vgInfo",{impact:1}); S.vg=j.data; render(); }); return; }
   if(d.vgres!==undefined){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer l’envoi"; return; } run("",async()=>{ const j=await api("vgResAll"); S.vg=j.data; render(); toast(j.n+" vente(s) envoyée(s) à l’Espace"); }); return; }
