@@ -339,10 +339,15 @@ const QUI = CSE.qui || "votre CSE", ISCSE = QUI==="votre CSE";
 const RG = DATA.rgpd;
 const BEERS = DATA.beers.map(b=>Object.assign(b,{c:(/^#2[0-3]1[ef]2[0-1]$/i.test(b.c)?"var(--ink)":b.c)}));
 const BOXES = DATA.boxes;
+const EXTRAS = DATA.extras||[], PRO = !!CSE.pro, TVA = CSE.tva||0.2, HT = PRO?" HT":"";
+const xCount = () => Object.values(S.x).reduce((a,b)=>a+b,0);
+const xAmount = () => EXTRAS.reduce((a,x)=>a+(S.x[x.id]||0)*x.p,0);
+const tvaOf = () => Math.round(total()*TVA*100)/100;
+const xLabel = () => { const t=new Set(EXTRAS.map(x=>x.t)); return [t.has("magnum")?"Magnums":"",t.has("coffret")?"Coffrets montés":"",t.has("barrique")?"Barriquées":""].filter(Boolean).join(" · ")||"Articles"; };
 const range = arr => { const mn=Math.min(...arr), mx=Math.max(...arr); return mn===mx?eur(mn):eur(mn).replace(" €","")+" – "+eur(mx); };
 const groupPrice = (g,f) => { const b=BEERS.find(x=>x.g===g); return b?price(b,f):0; };
-const S = {screen:"home", tab:"33", person:{nom:"",prenom:"",service:"",tel:"",email:"",news:false,majeur:false}, q:{"33":{},"75":{},"soft":{}}, boxes:[], compose:null, errors:{}};
-window.__vgIdle = () => S.screen==="home" && !Object.values(S.q).some(o=>Object.values(o).some(Boolean)) && !S.boxes.length;
+const S = {screen:"home", tab:"33", person:{nom:"",prenom:"",service:"",tel:"",email:"",news:false,majeur:false,rs:"",siren:"",rue:"",cp:"",ville:""}, q:{"33":{},"75":{},"soft":{}}, x:{}, boxes:[], compose:null, errors:{}};
+window.__vgIdle = () => S.screen==="home" && !Object.values(S.q).some(o=>Object.values(o).some(Boolean)) && !S.boxes.length && !Object.values(S.x).some(Boolean);
 
 function eur(v){ return Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €"; }
 const eur_old = v => v.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
@@ -364,7 +369,7 @@ const filled = x => Object.values(x.pick).reduce((a,b)=>a+b,0);
 const boxLabel = (x,i) => { const same=S.boxes.filter(y=>y.t===x.t); return BT(x.t).n + (same.length>1?` · n°${same.indexOf(x)+1}`:""); };
 const boxTodo = () => S.boxes.filter(x=>x.mode==="mesure" && filled(x)<BT(x.t).cap);
 const pickText = x => BEERS.filter(b=>x.pick[b.id]).map(b=>`${x.pick[b.id]} × ${b.n}`).join(", ");
-const total = () => amount("33")+amount("75")+amount("soft")+boxAmount();
+const total = () => amount("33")+amount("75")+amount("soft")+boxAmount()+xAmount();
 const missing = f => { const n=pool(f), k=CARTON[f==="75"?"75":"33"], r=n%k; return r? k-r : 0; };
 const blockers = () => ["33","75"].filter(f=>missing(f)>0);
 const TABS = () => { const t=[], b=B33(), so=SOFTS();
@@ -373,6 +378,7 @@ const TABS = () => { const t=[], b=B33(), so=SOFTS();
   const b75=b.filter(x=>!x.x75); if(F.b75&&b75.length) t.push(["75","75 cl",range(b75.map(x=>x.p75))]);
   if(F.soft&&so.length&&!mix33) t.push(["soft","Softs",range(so.map(x=>x.p33))]);
   if(F.box&&BOXES.length) t.push(["box","Coffrets","dès "+eur(Math.min(...BOXES.map(x=>x.p)))]);
+  if(EXTRAS.length) t.push(["x",xLabel(),"dès "+eur(Math.min(...EXTRAS.map(x=>x.p)))+HT]);
   return t; };
 const plural = (n,s,p) => n+" "+(n>1?(p||s+"s"):s);
 
@@ -399,13 +405,13 @@ function homeHtml(){
   return `${demo}${topBar()}
   <section class="hero">
     <p class="eyebrow">Commande groupée</p>
-    <h1>${ISCSE?"Les bières bio de Saint-Étienne, livrées à votre travail":"Les bières bio de Saint-Étienne, en commande groupée"}</h1>
+    <h1>${PRO?"Bières bio de Saint-Étienne : commande groupée pour les professionnels":ISCSE?"Les bières bio de Saint-Étienne, livrées à votre travail":"Les bières bio de Saint-Étienne, en commande groupée"}</h1>
     <div class="cse"><span class="lead">Commande organisée par</span>${CSE.limiteCourt?`<span class="dl">Date limite<strong>${CSE.limiteCourt}</strong></span>`:""}<b>${esc(CSE.nom)}</b></div>${CSE.message?`<p class="lead" style="margin-top:14px;white-space:pre-line">${esc(CSE.message)}</p>`:""}
   </section>
   ${CSE.ouvert?"":`<p class="closed">Les commandes sont closes${CSE.limite?" depuis le "+CSE.limite:""}. Rapprochez-vous de ${QUI} pour toute question.</p>`}
   ${vitrineHtml()}
   ${(CSE.retrait||CSE.lieu||CSE.creneau||CSE.paiement||CSE.contact)?`<section class="card"><p class="note" style="margin:0;line-height:1.7">${CSE.retrait?`<b>Livraison :</b> ${esc(CSE.retrait)}${CSE.lieu?", "+esc(CSE.lieu):""}<br>`:(CSE.lieu?`<b>Lieu de retrait :</b> ${esc(CSE.lieu)}<br>`:"")}${CSE.creneau?`<b>Créneau :</b> ${esc(CSE.creneau)}<br>`:""}${CSE.paiement?`<b>Paiement :</b> ${esc(CSE.paiement)}<br>`:""}${CSE.contact?`<b>Contact :</b> ${esc(CSE.contact)}`:""}</p></section>`:""}
-  <ol class="how">
+  ${PRO?`<ol class="how"><li><span class="n">1</span><p><b>Indiquez votre entreprise</b><small>Raison sociale, SIREN et adresse de facturation.</small></p></li><li><span class="n">2</span><p><b>Choisissez vos articles</b><small>Prix hors taxes, à l’unité, sans contrainte de carton.</small></p></li><li><span class="n">3</span><p><b>Validez</b><small>Vous recevez un bon de commande par e-mail. La facture suit, paiement par virement.</small></p></li></ol>`:""}<ol class="how"${PRO?' style="display:none"':""}>
     <li><span class="n">1</span><p><b>Indiquez votre nom</b><small>Pour que ${ISCSE?"le CSE":"l’organisateur"} retrouve votre commande à la livraison.</small></p></li>
     <li><span class="n">2</span><p><b>Choisissez vos ${F.b33||F.b75?"bières":"coffrets"}${(F.b33||F.b75)&&F.box?" et coffrets":""}</b><small>${[F.b33?`33 cl par cartons de ${CARTON["33"]}`:"",F.b75?`75 cl par cartons de ${CARTON["75"]}`:"",F.soft?`softs dans les mêmes cartons de ${CARTON["33"]} que les bières 33 cl`:""].filter(Boolean).join(", ")}${F.b33||F.b75?(F.soft?". Vous pouvez mélanger bières et softs dans un carton.":". Vous pouvez mélanger les bières dans un carton."):""}</small></p></li>
     <li><span class="n">3</span><p><b>Validez</b><small>Vous recevez un récapitulatif par e-mail. Le règlement se fait à la livraison.</small></p></li>
@@ -419,7 +425,42 @@ function field(id,label,ph,opt,type="text",ac=""){
   <input id="f-${id}" type="${type}" placeholder="${ph}" value="${esc(S.person[id])}" autocomplete="${ac}" data-p="${id}">
   ${err?`<span class="msg">${err}</span>`:""}</div>`;
 }
+let SIR={list:null,busy:false,err:""};
+const luhn = v => { const s=String(v).replace(/\D/g,""); if(s.length!==9&&s.length!==14) return false; let t=0; for(let i=0;i<s.length;i++){ let d=+s[s.length-1-i]; if(i%2){ d*=2; if(d>9) d-=9; } t+=d; } return t%10===0; };
+const sirHint = () => { const s=String(S.person.siren||"").replace(/\D/g,""); if(!s) return "Vous ne le connaissez pas ? Saisissez la raison sociale puis « Trouver le SIREN »."; if(s.length!==9&&s.length!==14) return "Le SIREN compte 9 chiffres."; return luhn(s)?"✓ Numéro valide":"⚠️ Ce numéro semble incorrect : vérifiez-le."; };
+const sirRes = () => SIR.busy?`<p class="note">Recherche dans l’annuaire des entreprises…</p>`:SIR.err?`<p class="note">${esc(SIR.err)}</p>`:(SIR.list||[]).map(e=>`<button type="button" class="choice" data-sirpick="${esc(e.siren)}" data-sirr="${esc(e.rue)}" data-sircp="${esc(e.cp)}" data-sirv="${esc(e.ville)}" style="text-align:left;width:100%;margin-top:6px"><span><b>${esc(e.nom)}</b><small>SIREN ${esc(e.siren)} · ${esc([e.rue,e.cp,e.ville].filter(Boolean).join(" "))}</small></span></button>`).join("");
+async function sirFind(){ const q=String(S.person.rs||"").trim(); if(q.length<3){ SIR={list:null,busy:false,err:"Saisissez d’abord la raison sociale (3 lettres au moins)."}; render(); return; }
+  SIR={list:null,busy:true,err:""}; render();
+  try{ const r=await fetch("https://recherche-entreprises.api.gouv.fr/search?q="+encodeURIComponent(q)+"&per_page=3",{credentials:"omit"}); const j=await r.json();
+    SIR.list=(j.results||[]).slice(0,3).map(e=>{ const g=e.siege||{}; return {siren:e.siren||"",nom:e.nom_complet||e.nom_raison_sociale||"",rue:[g.numero_voie,g.type_voie,g.libelle_voie].filter(Boolean).join(" "),cp:g.code_postal||"",ville:g.libelle_commune||""}; });
+    if(!SIR.list.length) SIR.err="Aucune entreprise trouvée : vérifiez la raison sociale ou saisissez le SIREN.";
+  }catch(e){ SIR.err="Annuaire injoignable pour le moment : saisissez le SIREN à la main."; }
+  SIR.busy=false; if(S.screen==="vous") render(); }
+function vousProHtml(){
+  return `${demo}${topBar("vous")}
+  <div><h2>Votre entreprise</h2><p class="lead">Ces informations servent à établir votre bon de commande, puis la facture.</p></div>
+  <form class="form" id="form-vous" novalidate>
+    ${field("rs","Raison sociale","Ex. Boulangerie Martin",false,"text","organization")}
+    <div class="field${S.errors.siren?" err":""}"><label for="f-siren">SIREN</label>
+      <div style="display:flex;gap:8px"><input id="f-siren" type="text" inputmode="numeric" placeholder="9 chiffres" value="${esc(S.person.siren)}" data-p="siren" style="flex:1;min-width:0"><button type="button" class="ghost" data-sirfind style="white-space:nowrap">Trouver le SIREN</button></div>
+      ${S.errors.siren?`<span class="msg">${S.errors.siren}</span>`:""}<small class="note" id="sir-hint" style="display:block;margin-top:4px">${sirHint()}</small>
+      <div id="sir-res">${sirRes()}</div></div>
+    ${field("rue","Adresse de facturation","N° et rue",false,"text","street-address")}
+    <div style="display:grid;grid-template-columns:minmax(90px,130px) 1fr;gap:10px">${field("cp","Code postal","42110",false,"text","postal-code")}${field("ville","Ville","Feurs",false,"text","address-level2")}</div>
+    ${field("prenom","Prénom du contact","Marie",false,"text","given-name")}
+    ${field("nom","Nom du contact","Dupont",false,"text","family-name")}
+    ${field("tel","Téléphone","06 12 34 56 78",false,"tel","tel")}
+    ${field("email","E-mail de facturation","compta@entreprise.fr",false,"email","email")}
+    <label class="choice" for="f-news"><input type="checkbox" id="f-news" ${S.person.news?"checked":""}><span><b>Recevoir les actualités de la brasserie</b><small>Nouvelles bières et offres pour les professionnels. Désinscription en un clic.</small></span></label>
+    <details class="rgpd"><summary>Vos données personnelles</summary>
+      <p>Les coordonnées de votre entreprise et de son contact sont utilisées par La Brasserie Stéphanoise pour établir le bon de commande et la facture, créer la fiche client de votre entreprise et assurer le suivi commercial. Destinataires : la brasserie, son commercial Pierre Rolle et l’organisateur de la vente.</p>
+      <p>Elles sont conservées 3 ans après votre dernière commande dans cette application ; les factures sont conservées 10 ans dans notre logiciel de facturation, comme la loi l’exige. Le bouton « Trouver le SIREN » envoie seulement la raison sociale saisie à l’annuaire public des entreprises (recherche-entreprises.api.gouv.fr).</p>
+      <p>Vous pouvez consulter, corriger ou faire supprimer ces données, et demander à ne plus recevoir nos offres, en écrivant à ${esc(RG.email)}. En cas de désaccord, vous pouvez saisir la CNIL (cnil.fr).</p>
+    </details>
+  </form>`;
+}
 function vousHtml(){
+  if(PRO) return vousProHtml();
   return `${demo}${topBar("vous")}
   <div><h2>Vos coordonnées</h2><p class="lead">Elles servent uniquement à préparer et remettre votre commande.</p></div>
   <form class="form" id="form-vous" novalidate>
@@ -478,7 +519,7 @@ function beerRow(b,f){
   return `<article class="beer${q?" has":""}${no?" off":""}" style="--c:${b.c}${no?";opacity:.55":""}">
     <div class="plate" data-info="${b.id}" role="button" tabindex="0" aria-label="Voir la fiche ${esc(b.n)}">${plateImg(b)}</div>
     <div class="info"><button class="name" data-info="${b.id}">${esc(b.n)}</button>
-      <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}${pBout(b,f)>price(b,f)?` <span class="old">${eur(pBout(b,f))}</span>`:""}</span>${pBout(b,f)>price(b,f)?`<span class="save">${eur(pBout(b,f)-price(b,f))} d’économie</span>`:""}
+      <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}${HT}${pBout(b,f)>price(b,f)?` <span class="old">${eur(pBout(b,f))}</span>`:""}</span>${pBout(b,f)>price(b,f)?`<span class="save">${eur(pBout(b,f)-price(b,f))} d’économie</span>`:""}
       ${pastille(b)?`<span style="margin-top:3px">${pastille(b,true).replace("pas ","pas ").replace('class="pas','style="margin-left:0" class="pas')}</span>`:""}<button type="button" class="fl" data-info="${b.id}">Voir la fiche ›</button>${no?`<span class="meta" style="color:#B45309;font-weight:700">En rupture</span>`:""}</div>
     <div class="stepper"><div class="row">
       <button class="sbtn" data-dec="${b.id}" data-f="${f}" aria-label="Retirer une ${esc(b.n)}" ${q?"":"disabled"}>−</button>
@@ -487,14 +528,23 @@ function beerRow(b,f){
       <span class="sub">${q?eur(q*price(b,f)):""}</span></div>
   </article>`;
 }
+function xRow(x){ const q=S.x[x.id]||0, no=!!x.x;
+  return `<article class="beer${q?" has":""}${no?" off":""}" style="--c:var(--brand)${no?";opacity:.55":""}">
+    <div class="plate">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy" decoding="async">`:`<span class="noimg" style="--c:var(--brand)">${esc(x.n.replace(/^(La |Le |L’|L')/,"").slice(0,2))}</span>`}</div>
+    <div class="info"><span class="name">${esc(x.n)}</span><span class="meta">${esc([x.lib,x.s,x.d].filter(Boolean).join(" · "))}</span><span class="price">${eur(x.p)}${HT}</span>${no?`<span class="meta" style="color:#B45309;font-weight:700">En rupture</span>`:""}</div>
+    <div class="stepper"><div class="row"><button class="sbtn" data-xdec="${x.id}" aria-label="Retirer ${esc(x.n)}" ${q?"":"disabled"}>−</button><span class="qty" id="q-x-${x.id}" aria-live="polite">${q}</span><button class="sbtn plus" data-xinc="${x.id}" aria-label="Ajouter ${esc(x.n)}" ${no?"disabled":""}>+</button></div><span class="sub">${q?eur(q*x.p)+HT:""}</span></div>
+  </article>`; }
+function xHtml(){ const gs=[...new Set(EXTRAS.map(x=>x.grp||"Articles"))];
+  return `<p class="lead">${PRO?"Prix hors taxes, TVA 20 % en plus. ":""}À l’unité, sans contrainte de carton.</p>`+gs.map(g=>`<div class="group"><h3>${esc(g)}</h3></div><div class="list">${EXTRAS.filter(x=>(x.grp||"Articles")===g).map(xRow).join("")}</div>`).join(""); }
 function bieresHtml(){
   const f=S.tab;
   const tabs=TABS();
   const tabHtml=`<div class="tabs" role="tablist">${tabs.map(([k,l,s])=>{
-    const n=k==="box"?boxCount():count(k)+(k==="33"&&!tabs.some(x=>x[0]==="soft")?count("soft"):0);
+    const n=k==="x"?xCount():k==="box"?boxCount():count(k)+(k==="33"&&!tabs.some(x=>x[0]==="soft")?count("soft"):0);
     return `<button class="tab" role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${l}<small>${s}</small>${n?`<span class="badge">${n}</span>`:""}</button>`;}).join("")}</div>`;
   let body="";
-  if(f==="box"){
+  if(f==="x") body = xHtml();
+  else if(f==="box"){
     body = `<p class="lead">Des coffrets prêts à offrir${ISCSE?", à prix CSE":""}. Pas de contrainte de carton.</p>
     <div class="list">${BOXES.map(b=>{const q=nOf(b.id);return `<article class="box${q?" has":""}">
       <img src="${IMG[b.img]}" alt="${esc(b.n)}">
@@ -553,15 +603,16 @@ function recapHtml(){
   const sec=(t,html,tab)=>`<section class="card"><h3>${t}<button data-goto="${tab}">Modifier</button></h3>${html}</section>`;
   return `${demo}${topBar("recap")}<h2>Vérifiez votre commande</h2>
   <section class="card"><h3>Vous<button data-goto="vous">Modifier</button></h3>
-    <dl class="who"><dt>Nom</dt><dd>${esc(p.prenom)} ${esc(p.nom)}</dd><dt>E-mail</dt><dd style="overflow-wrap:anywhere">${esc(p.email)}</dd>${p.service?`<dt>Service</dt><dd>${esc(p.service)}</dd>`:""}${p.tel?`<dt>Téléphone</dt><dd>${esc(p.tel)}</dd>`:""}<dt>Vente</dt><dd>${esc(CSE.nom)}</dd></dl></section>
+    <dl class="who">${PRO?`<dt>Entreprise</dt><dd>${esc(p.rs)}<br><small>SIREN ${esc(p.siren)} · ${esc(p.rue)}, ${esc(p.cp)} ${esc(p.ville)}</small></dd>`:""}<dt>${PRO?"Contact":"Nom"}</dt><dd>${esc(p.prenom)} ${esc(p.nom)}</dd><dt>E-mail</dt><dd style="overflow-wrap:anywhere">${esc(p.email)}</dd>${p.service?`<dt>Service</dt><dd>${esc(p.service)}</dd>`:""}${p.tel?`<dt>Téléphone</dt><dd>${esc(p.tel)}</dd>`:""}<dt>Vente</dt><dd>${esc(CSE.nom)}</dd></dl></section>
   ${n33?sec(`33 cl · ${plural(n33,"bouteille")}${count("soft")?"":" · "+plural(n33/CARTON["33"],"carton")}`,recapLines("33"),"33"):""}
   ${n75?sec(`75 cl · ${plural(n75/CARTON["75"],"carton")}`,recapLines("75"),"75"):""}
   ${count("soft")?sec(`Softs · ${plural(count("soft"),"bouteille")}`,recapLines("soft"),"soft"):""}
   ${count("soft")?`<p class="note" style="margin:-4px 2px 0">${plural((n33+count("soft"))/CARTON["33"],"carton")} de 33 cl, bières et softs mélangés.</p>`:""}
   ${nb?sec(`Coffrets · ${nb}`,S.boxes.map((x,i)=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${esc(boxLabel(x,i))}<br><small>${x.mode==="assort"?"Assortiment de la brasserie":"Sur mesure : "+esc(pickText(x))}</small></span><span>${eur(BT(x.t).p)}</span></div>`).join(""),"box"):""}
-  <div class="tot"><span>Total</span><span>${eur(total())}</span></div>
+  ${xCount()?sec(`${xLabel()} · ${plural(xCount(),"article")}`,EXTRAS.filter(x=>S.x[x.id]).map(x=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${S.x[x.id]} × ${esc(x.n)}</span><span>${eur(S.x[x.id]*x.p)}${HT}</span></div>`).join(""),"x"):""}
+  ${PRO?`<div class="tot"><span>Total HT</span><span>${eur(total())}</span></div><div class="tot" style="font-size:15px;font-weight:500"><span>TVA 20 %</span><span>${eur(tvaOf())}</span></div><div class="tot"><span>Total TTC</span><span>${eur(total()+tvaOf())}</span></div>`:`<div class="tot"><span>Total</span><span>${eur(total())}</span></div>`}
   ${nb?`<p class="note">Dont ${eur(boxSaving())} d’économie sur les coffrets.</p>`:""}
-  <p class="note">${CSE.ha?"Règlement en ligne sur HelloAsso, juste après la validation.":`Règlement à la livraison, auprès de ${QUI}.`} ${CSE.retrait?"Retrait ou livraison : "+esc(CSE.retrait)+(CSE.lieu?", "+esc(CSE.lieu):"")+".":"Retrait ou livraison : date communiquée par "+QUI+"."}</p>
+  <p class="note">${PRO?"Votre bon de commande vous est envoyé par e-mail. La facture vous sera envoyée par La Brasserie Stéphanoise ; paiement par virement à réception de la facture.":CSE.ha?"Règlement en ligne sur HelloAsso, juste après la validation.":`Règlement à la livraison, auprès de ${QUI}.`} ${CSE.retrait?"Retrait ou livraison : "+esc(CSE.retrait)+(CSE.lieu?", "+esc(CSE.lieu):"")+".":"Retrait ou livraison : date communiquée par "+QUI+"."}</p>
   ${CSE.creneau||CSE.paiement?`<p class="note">${CSE.creneau?"Créneau : "+esc(CSE.creneau)+". ":""}${CSE.paiement?"Paiement : "+esc(CSE.paiement)+".":""}</p>`:""}
   ${sendError?`<p class="err-box" role="alert">${esc(sendError)}</p>`:""}
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
@@ -569,7 +620,7 @@ function recapHtml(){
 function doneHtml(){
   return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${result?(result.nv||result.numero):""} enregistrée</span>
   <h1>Merci ${esc(S.person.prenom)} !</h1>
-  <p class="lead">Votre commande de ${eur(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. ${CSE.ha?"Il ne vous reste plus qu’à la régler en ligne.":`Vous la réglerez au moment de la livraison, auprès de ${QUI}.`}</p>
+  <p class="lead">${PRO?`Votre commande de ${eur(result?result.total:total())} HT (${eur(result&&result.ttc?result.ttc:total()+tvaOf())} TTC) est enregistrée. Votre bon de commande est envoyé à ${esc(S.person.email)}. La facture vous sera envoyée par La Brasserie Stéphanoise ; paiement par virement à réception.</p><p class="lead" style="display:none">`:""}Votre commande de ${eur(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. ${CSE.ha?"Il ne vous reste plus qu’à la régler en ligne.":`Vous la réglerez au moment de la livraison, auprès de ${QUI}.`}</p>
   ${CSE.ha?`<button class="cta" data-hapay="${result?result.numero:""}">Payer ${eur(result?result.total:total())} sur HelloAsso</button><p class="note">Paiement sécurisé sur la page HelloAsso de l’organisateur.</p>`:""}
   <p class="note">Un oubli ou une erreur ? Répondez simplement à l’e-mail de confirmation.</p>
   <button class="cta" data-restart>Passer une autre commande</button></section>`;
@@ -593,15 +644,15 @@ function renderBar(){
   const bar=$("#bar"), inn=$("#barIn");
   if(S.screen==="catalogue"){ bar.hidden=false; const back=S.prev||"home"; inn.innerHTML=back==="home"?`<button class="ghost" data-go="home">Retour</button><div class="sum"></div>${CSE.ouvert?`<button class="cta" data-go="vous">Commencer ma commande</button>`:""}`:`<button class="cta" style="flex:1" data-go="${back}">Revenir à ma commande</button>`; return; }
   if(S.screen==="home"){ if(!CSE.ouvert){ bar.hidden=true; return; } bar.hidden=false; inn.innerHTML=`<button class="cta" style="flex:1" data-go="vous">Commencer ma commande</button>`; return; }
-  if(S.screen==="vous"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="home">Retour</button><div class="sum"></div><button class="cta" data-next-vous>Choisir mes bières</button>`; return; }
+  if(S.screen==="vous"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="home">Retour</button><div class="sum"></div><button class="cta" data-next-vous>${CATB().length?"Choisir mes bières":"Choisir mes articles"}</button>`; return; }
   if(S.screen==="bieres"){
     const bl=blockers(), todo=boxTodo(), empty=total()===0;
-    const why = empty?"Ajoutez au moins une bière ou un coffret":bl.length?bl.map(f=>`Encore ${plural(missing(f),"bouteille")} en ${flab(f)}`).join(" · "):todo.length?`${plural(todo.length,"coffret")} sur mesure à compléter`:`${plural(count("33")+count("75")+count("soft"),"bouteille")}${boxCount()?" · "+plural(boxCount(),"coffret"):""}`;
+    const why = empty?(EXTRAS.length&&!CATB().length?"Ajoutez au moins un article":"Ajoutez au moins une bière ou un coffret"):bl.length?bl.map(f=>`Encore ${plural(missing(f),"bouteille")} en ${flab(f)}`).join(" · "):todo.length?`${plural(todo.length,"coffret")} sur mesure à compléter`:[count("33")+count("75")+count("soft")?plural(count("33")+count("75")+count("soft"),"bouteille"):"",boxCount()?plural(boxCount(),"coffret"):"",xCount()?plural(xCount(),"article"):""].filter(Boolean).join(" · ");
     bar.hidden=false;
-    inn.innerHTML=`<div class="sum"><b>${eur(total())}</b><small class="${empty||bl.length||todo.length?"why":""}">${why}</small></div><button class="cta" data-go="recap" ${empty||bl.length||todo.length?"disabled":""}>Récapitulatif</button>`;
+    inn.innerHTML=`<div class="sum"><b>${eur(total())}${HT}</b><small class="${empty||bl.length||todo.length?"why":""}">${why}</small></div><button class="cta" data-go="recap" ${empty||bl.length||todo.length?"disabled":""}>Récapitulatif</button>`;
     return;
   }
-  if(S.screen==="recap"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="bieres" ${sending?"disabled":""}>Retour</button><div class="sum"><b>${eur(total())}</b></div><button class="cta" data-submit ${sending?"disabled":""}>${sending?"Envoi…":"Valider ma commande"}</button>`; return; }
+  if(S.screen==="recap"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="bieres" ${sending?"disabled":""}>Retour</button><div class="sum"><b>${eur(total())}${HT}</b></div><button class="cta" data-submit ${sending?"disabled":""}>${sending?"Envoi…":"Valider ma commande"}</button>`; return; }
   bar.hidden=true;
 }
 
@@ -609,7 +660,7 @@ let sending=false, result=null, sendError="";
 function submit(){
   if(sending) return;
   sending=true; sendError=""; renderBar();
-  const payload={cse:CSE.code, person:S.person, q:S.q, boxes:S.boxes};
+  const payload={cse:CSE.code, person:S.person, q:S.q, x:S.x, boxes:S.boxes};
   const fail=msg=>{ sending=false; sendError=msg||"La commande n’a pas pu être envoyée. Vérifiez votre connexion et réessayez."; renderBar(); render(); };
   fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
     .then(r=>r.json())
@@ -635,8 +686,8 @@ function closeSheet(fromPop){ const bg=$("#sheetBg"); const was=!bg.hidden; bg.h
 window.addEventListener("popstate",()=>{ const bg=$("#sheetBg"); if(!bg.hidden&&S.compose===null){ closeSheet(true); return; } if(S.screen==="catalogue"){ const to=S.after||S.prev||"home"; S.after=null; go(to); } });
 function openCatalogue(){ if(S.screen==="catalogue") return; S.prev=S.screen; try{ history.pushState({bs:'cat'},''); }catch(e){} go("catalogue"); }
 const CKEY="bs_panier_"+(CSE.code||"");
-function savePanier(){ try{ if(S.screen==="done"){ sessionStorage.removeItem(CKEY); return; } sessionStorage.setItem(CKEY,JSON.stringify({q:S.q,boxes:S.boxes,person:S.person,t:Date.now()})); }catch(e){} }
-(function(){ try{ const x=JSON.parse(sessionStorage.getItem(CKEY)||"null"); if(x&&Date.now()-x.t<12*3600e3){ S.q=Object.assign({"33":{},"75":{},"soft":{}},x.q||{}); S.boxes=x.boxes||[]; S.person=Object.assign(S.person,x.person||{}); } }catch(e){} })();
+function savePanier(){ try{ if(S.screen==="done"){ sessionStorage.removeItem(CKEY); return; } sessionStorage.setItem(CKEY,JSON.stringify({q:S.q,x:S.x,boxes:S.boxes,person:S.person,t:Date.now()})); }catch(e){} }
+(function(){ try{ const x=JSON.parse(sessionStorage.getItem(CKEY)||"null"); if(x&&Date.now()-x.t<12*3600e3){ S.q=Object.assign({"33":{},"75":{},"soft":{}},x.q||{}); S.boxes=x.boxes||[]; S.x=x.x||{}; S.person=Object.assign(S.person,x.person||{}); } }catch(e){} })();
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,[data-info],[data-go]");
@@ -649,6 +700,9 @@ document.addEventListener("click",e=>{
   if(d.goto){ if(d.goto==="vous") go("vous"); else { S.tab=TABS().some(x=>x[0]===d.goto)?d.goto:(d.goto==="soft"?"33":d.goto); go("bieres"); } return; }
   if(d.tab){ S.tab=d.tab; render(); return; }
   if(d.inc||d.dec){ const f=d.f||S.tab, id=d.inc||d.dec; const v=(S.q[f][id]||0)+(d.inc?1:-1); S.q[f][id]=Math.max(0,Math.min(240,v)); if(!S.q[f][id]) delete S.q[f][id]; render(); bump(`q-${f}-${id}`); return; }
+  if(d.xinc||d.xdec){ const id=d.xinc||d.xdec; const v=(S.x[id]||0)+(d.xinc?1:-1); S.x[id]=Math.max(0,Math.min(500,v)); if(!S.x[id]) delete S.x[id]; render(); bump("q-x-"+id); return; }
+  if(d.sirfind!==undefined){ sirFind(); return; }
+  if(d.sirpick){ S.person.siren=d.sirpick; if(!String(S.person.rue||"").trim()) S.person.rue=d.sirr||""; if(!String(S.person.cp||"").trim()) S.person.cp=d.sircp||""; if(!String(S.person.ville||"").trim()) S.person.ville=d.sirv||""; SIR={list:null,busy:false,err:""}; ["siren","rue","cp","ville"].forEach(k=>delete S.errors[k]); render(); return; }
   if(d.binc){ if(boxCount()<50) S.boxes.push({t:d.binc,mode:"assort",pick:{}}); render(); bump(`q-box-${d.binc}`); return; }
   if(d.bdec){ for(let k=S.boxes.length-1;k>=0;k--){ if(S.boxes[k].t===d.bdec){ S.boxes.splice(k,1); break; } } render(); bump(`q-box-${d.bdec}`); return; }
   if(d.mode){ const [i,m]=d.mode.split(":"); const x=S.boxes[+i]; x.mode=m; render(); if(m==="mesure"&&!filled(x)) openCompose(+i); return; }
@@ -660,19 +714,28 @@ document.addEventListener("click",e=>{
     if(!S.person.prenom.trim()) S.errors.prenom="Indiquez votre prénom.";
     if(!S.person.nom.trim()) S.errors.nom="Indiquez votre nom.";
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(S.person.email.trim())) S.errors.email=S.person.email.trim()?"Cette adresse e-mail semble incomplète.":"Indiquez votre e-mail pour recevoir la confirmation.";
-    if(!S.person.majeur) S.errors.majeur="Cochez cette case pour valider votre commande.";
+    if(PRO){ const P0=S.person, sd=String(P0.siren||"").replace(/\D/g,"");
+      if(!String(P0.rs||"").trim()) S.errors.rs="Indiquez la raison sociale.";
+      if(sd.length!==9&&sd.length!==14) S.errors.siren="Indiquez le SIREN (9 chiffres).";
+      if(!String(P0.rue||"").trim()) S.errors.rue="Indiquez l’adresse de facturation.";
+      if(!/^\d{5}$/.test(String(P0.cp||"").trim())) S.errors.cp="5 chiffres.";
+      if(!String(P0.ville||"").trim()) S.errors.ville="Indiquez la ville.";
+      if(!String(P0.tel||"").trim()) S.errors.tel="Indiquez un téléphone.";
+      const ord=["rs","siren","rue","cp","ville","prenom","nom","tel","email"], E0=S.errors; S.errors={}; ord.forEach(k=>{ if(E0[k]) S.errors[k]=E0[k]; });
+    } else if(!S.person.majeur) S.errors.majeur="Cochez cette case pour valider votre commande.";
     if(Object.keys(S.errors).length){ render(); const f=document.getElementById("f-"+Object.keys(S.errors)[0]); f&&f.focus(); return; }
     go("bieres"); return;
   }
   if(d.submit!==undefined){ submit(); return; }
   if(d.hapay!==undefined){ haGo(d.hapay||(result&&result.numero)); return; }
-  if(d.restart!==undefined){ result=null; S.q={"33":{},"75":{},"soft":{}}; S.boxes=[]; S.compose=null; S.person={nom:"",prenom:"",service:"",tel:"",email:"",news:false}; S.tab=(TABS()[0]||["33"])[0]; go("home"); return; }
+  if(d.restart!==undefined){ result=null; S.q={"33":{},"75":{},"soft":{}}; S.boxes=[]; S.x={}; S.compose=null; S.person={nom:"",prenom:"",service:"",tel:"",email:"",news:false,rs:"",siren:"",rue:"",cp:"",ville:""}; S.tab=(TABS()[0]||["33"])[0]; go("home"); return; }
 });
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){ if(S.compose!==null) closeCompose(); else closeSheet(); }
   if((e.key==="Enter"||e.key===" ")&&e.target.matches(".plate[data-info]")){ e.preventDefault(); openSheet(e.target.dataset.info); }
 });
 document.addEventListener("input",e=>{
+  if(e.target.dataset.p==="siren"){ S.person.siren=e.target.value; const h=document.getElementById("sir-hint"); if(h) h.textContent=sirHint(); }
   if(e.target.dataset.p){ S.person[e.target.dataset.p]=e.target.value; if(S.errors[e.target.dataset.p]){ delete S.errors[e.target.dataset.p]; e.target.closest(".field").classList.remove("err"); const m=e.target.closest(".field").querySelector(".msg"); m&&m.remove(); } }
 });
 document.addEventListener("change",e=>{ if(e.target.id==="f-news") S.person.news=e.target.checked; if(e.target.id==="f-majeur"){ S.person.majeur=e.target.checked; if(e.target.checked&&S.errors.majeur){ delete S.errors.majeur; render(); } } });

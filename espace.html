@@ -139,6 +139,7 @@ body.loading::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z
     <button type="button" data-nav="ventes">Ventes</button>
     <button type="button" data-nav="grilles">Grilles de prix</button>
     <button type="button" data-nav="catalogue">Catalogue</button>
+    <button type="button" data-nav="facturer" id="navFact" hidden>À facturer</button>
     <button type="button" data-nav="contacts" id="navContacts" hidden>Contacts</button>
     <button type="button" data-nav="acces" id="navAcces" hidden>Accès</button>
   </nav>
@@ -249,7 +250,7 @@ function vVentes(){
   const rows = vs.map(v=>{const st=status(v);return `<tr class="row" tabindex="0" data-open="${esc(v.code)}">
     <td><b>${esc(v.nom)}</b><div class="sub">${esc(v.resp||"")}</div></td>
     <td><span class="pill ${st.k}">${st.t}</span>${v.livraison&&v.dateOk===false?' <span class="pill soon">Date à confirmer</span>':""}</td>
-    <td>${esc(gName(v))}${v.resale?' <span class="tag resale">Revente</span>':""}</td>
+    <td>${esc(gName(v))}${v.resale?' <span class="tag resale">Revente</span>':""}${v.pro?' <span class="tag">Pro HT</span>':""}</td>
     <td class="num">${dfr(v.limite)}</td><td class="num">${v.livraison?dfr(v.livraison):esc(v.livraisonTxt||"–")}</td>
     <td class="num">${v.n}</td><td class="num">${eur(v.aFacturer)}</td></tr>`;}).join("");
   return `<div class="head"><div><h1>Ventes groupées</h1><p class="muted">Toutes tes ventes, ouvertes et passées.</p></div>
@@ -276,11 +277,11 @@ function vVente(){
   let body = "";
   if (S.tab==="apercu") body = `<div class="sum">
       ${cf.resale?`<div><b>${eur(t.enc)}</b><span>payé par les acheteurs</span></div><div class="hl"><b>${eur(t.fac)}</b><span>à facturer à l’organisateur</span></div><div><b>${eur(t.enc-t.fac)}</b><span>marge de l’organisateur</span></div>`
-      :`<div class="hl"><b>${eur(t.fac)}</b><span>à facturer</span></div>`}
+      :`<div class="hl"><b>${eur(t.fac)}</b><span>à facturer${cf.pro?" HT":""}</span></div>`}
       <div><b>${C.orders.length}</b><span>commandes</span></div></div>
     ${v.livraison&&v.dateOk===false?`<section class="card" style="border-color:var(--warn)"><h2>Date de livraison à confirmer</h2><p style="margin:0">L’organisateur demande une livraison le <b>${dfr(v.livraison)}</b>${v.limite?" (date limite de commande : "+dfr(v.limite)+")":""}.</p><div class="bar"><button class="btn primary" type="button" data-confirmdate>Confirmer cette date</button><span class="muted">ou</span><input type="date" id="altdate" class="price" style="width:auto"><button class="btn" type="button" data-confirmalt>Confirmer une autre date</button></div><p class="note">L’organisateur reçoit un e-mail de confirmation.</p></section>`:""}
     <section class="card"><h2>Liens</h2><div class="links">
-      <div class="link"><div class="l"><b>Lien à diffuser</b> <span class="sub">${cf.resale?"aux adhérents / parents":"aux salariés"}</span><code>${esc(venteUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(venteUrl(v))}">Copier</button></div>
+      <div class="link"><div class="l"><b>Lien à diffuser</b> <span class="sub">${cf.pro?"aux participants (professionnels)":cf.resale?"aux adhérents / parents":"aux salariés"}</span><code>${esc(venteUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(venteUrl(v))}">Copier</button></div>
       <div class="link"><div class="l"><b>Lien du responsable</b> <span class="sub">suivi des commandes, à ne pas diffuser</span><code>${esc(suiviUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(suiviUrl(v))}">Copier</button></div>
     </div>${v.email?`<div class="bar"><button class="btn small" type="button" data-relsend="D">Envoyer les liens à l’organisateur par e-mail</button><span class="note">Mail d’ouverture : liens, QR code, message prêt à transférer.</span></div>`:""}</section>
     <section class="card"><h2>Informations</h2><div class="grid2">
@@ -295,12 +296,12 @@ function vVente(){
       <div class="bar"><button class="btn primary" type="button" data-saveinfos>Enregistrer</button></div></section>${haCard()}`;
   if (S.tab==="produits") body = `<section class="card"><div class="head"><div><h2>Produits et prix de cette vente</h2><p class="note">Tes changements ici ne touchent que cette vente. Les commandes déjà passées gardent leur prix.</p></div>
       <button class="btn small" type="button" data-savegrid>Enregistrer comme grille…</button></div>
-      <div class="bar"><span class="seg" role="group" aria-label="Type de vente"><button type="button" data-ctype="std" data-scope="vente" aria-pressed="${!S.edit.resale}">Standard</button><button type="button" data-ctype="resale" data-scope="vente" aria-pressed="${S.edit.resale}">Revente avec marge</button></span></div>
+      <div class="bar"><span class="seg" role="group" aria-label="Type de vente"><button type="button" data-ctype="std" data-scope="vente" aria-pressed="${!S.edit.resale&&!S.edit.pro}">Standard</button><button type="button" data-ctype="resale" data-scope="vente" aria-pressed="${!!S.edit.resale}">Revente avec marge</button><button type="button" data-ctype="pro" data-scope="vente" aria-pressed="${!!S.edit.pro}">Pro (prix HT)</button></span></div>
       ${priceTable(S.edit.prix, S.edit.resale, "vente", S.edit.formats)}
       <div class="bar"><button class="btn primary" type="button" data-saveprix>Enregistrer les produits et prix</button></div></section>`;
   if (S.tab==="commandes") body = `<section class="card"><div class="scroll"><table><thead><tr><th class="num">N°</th><th>Nom</th><th>Service</th><th>Détail</th><th class="num">${cf.resale?"Payé par l’acheteur":"Montant"}</th>${cf.resale?'<th class="num">Prix brasserie</th>':""}</tr></thead>
     <tbody>${C.orders.map(o=>`<tr><td class="num">${o.n}</td><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><div class="sub">${esc(o.date)}</div></td><td class="muted">${esc(o.service)}</td><td class="sub">${detail(o)}</td><td class="num">${eur(o.montant)}</td>${cf.resale?`<td class="num">${eur(o.montantB==null?o.montant:o.montantB)}</td>`:""}</tr>`).join("") || `<tr><td colspan="6" class="muted">Aucune commande pour l’instant.</td></tr>`}</tbody></table></div></section>`;
-  if (S.tab==="exports") body = vExports();
+  if (S.tab==="exports") body = distHtml() + vExports();
   if (S.tab==="mails") body = vMails();
   return `<div><button class="back" type="button" data-nav="ventes">← Toutes les ventes</button></div>
   <div class="head"><div><h1>${esc(v.nom)}</h1><p><span class="pill ${st.k}">${st.t}</span> <span class="muted">${v.limite?"· clôture le "+dfr(v.limite):""}</span></p></div>
@@ -311,11 +312,21 @@ function vVente(){
 function detail(o){ const p=[]; const nm=id=>byId[id]?byId[id].n:id;
   for(const[k,q]of Object.entries(o.q["33"]||{}))p.push(q+" × "+nm(k)+" 33"); for(const[k,q]of Object.entries(o.q["75"]||{}))p.push(q+" × "+nm(k)+" 75");
   for(const[k,q]of Object.entries(o.q.soft||{}))p.push(q+" × "+nm(k)); for(const[k,q]of Object.entries(o.bx||{}))p.push(q+" × "+nm(k));
-  return esc(p.join(", ")) + (o.compo?`<br>${esc(o.compo)}`:""); }
+  for(const[k,q]of Object.entries((o.px&&o.px.x)||{}))p.push(q+" × "+k);
+  const X=o.px||{};
+  return esc(p.join(", ")) + (o.compo?`<br>${esc(o.compo)}`:"") + (X.rs?`<br><b>${esc(X.rs)}</b> · SIREN ${esc(X.siren)} · ${esc(X.cp)} ${esc(X.ville)}${X.ttc?" · "+eur(X.ttc)+" TTC":""}`:"") + (X.fiche?`<br><span class="tag">${esc(X.fiche)}</span>`:""); }
 function totals(){ const o=S.cur.orders; return {enc:o.reduce((a,x)=>a+x.montant,0), fac:o.reduce((a,x)=>a+(x.montantB==null?x.montant:x.montantB),0)}; }
 function qtyBy(){ const q={}; const add=(id,k,n)=>{q[id]=q[id]||{q33:0,q75:0,soft:0,bx:0}; q[id][k]+=n;};
   S.cur.orders.forEach(o=>{ for(const[k,n]of Object.entries(o.q["33"]||{}))add(k,"q33",n); for(const[k,n]of Object.entries(o.q["75"]||{}))add(k,"q75",n); for(const[k,n]of Object.entries(o.q.soft||{}))add(k,"soft",n); for(const[k,n]of Object.entries(o.bx||{}))add(k,"bx",n); }); return q; }
 
+function distRows(){ return S.cur.orders.slice().sort((a,b)=>String((a.px&&a.px.rs)||a.nom).localeCompare(String((b.px&&b.px.rs)||b.nom),"fr")); }
+function distHtml(){ const v=S.cur.vente, R=distRows(); if(!R.length) return "";
+  return `<section class="card"><div class="head"><div><h2>Liste de distribution</h2><p class="note">Une ligne par ${S.cur.config.pro?"entreprise":"acheteur"}, avec ce qu’il reçoit. À imprimer pour le jour de livraison${v.livraison?" ("+dfr(v.livraison)+")":""}.</p></div><button class="btn small" type="button" data-distprint>Imprimer</button></div>
+  <div class="scroll"><table><thead><tr><th class="num">N°</th><th>${S.cur.config.pro?"Entreprise":"Nom"}</th><th>Reçoit</th><th>Remis</th></tr></thead><tbody>${R.map(o=>`<tr><td class="num">${esc(o.nv||o.n)}</td><td><b>${esc((o.px&&o.px.rs)||((o.prenom||"")+" "+(o.nom||"")))}</b><div class="sub">${esc((o.px&&o.px.rs)?(o.prenom+" "+o.nom+" · "+(o.tel||"").replace(/^'/,"")):o.service||"")}</div></td><td class="sub">${detail(Object.assign({},o,{px:Object.assign({},o.px||{},{rs:"",fiche:""})}))}</td><td>☐</td></tr>`).join("")}</tbody></table></div></section>`; }
+function distPrint(){ const v=S.cur.vente, R=distRows(), w=window.open("","_blank"); if(!w){ toast("Autorise les fenêtres pour imprimer"); return; }
+  const rows=R.map(o=>`<tr><td>${esc(o.nv||o.n)}</td><td><b>${esc((o.px&&o.px.rs)||((o.prenom||"")+" "+(o.nom||"")))}</b><br><small>${esc((o.px&&o.px.rs)?(o.prenom+" "+o.nom+" "+(o.tel||"").replace(/^'/,"")):o.service||"")}</small></td><td>${detail(Object.assign({},o,{px:Object.assign({},o.px||{},{rs:"",fiche:""})}))}</td><td style="width:60px"></td></tr>`).join("");
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Distribution – ${esc(v.nom)}</title><style>body{font:13px Arial,sans-serif;margin:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #999;padding:6px;vertical-align:top;text-align:left}h1{font-size:18px}</style><h1>Liste de distribution – ${esc(v.nom)}</h1><p>${v.livraison?"Livraison le "+dfr(v.livraison):""}${v.lieu?" · "+esc(v.lieu):""} · ${R.length} commande(s)</p><table><thead><tr><th>N°</th><th>${S.cur.config.pro?"Entreprise":"Nom"}</th><th>Reçoit</th><th>Signature</th></tr></thead><tbody>${rows}</tbody></table>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),300); }
 function vExports(){
   const v=S.cur.vente, cf=S.cur.config, q=qtyBy(), t=totals();
   let html=`<section class="card"><h2>Récaps</h2><div class="grid2">
@@ -340,6 +351,7 @@ function vExports(){
   return html+`</section>`;
 }
 function factLines(){ const q=qtyBy(), pr=S.cur.config.prix, L=[];
+  ((D&&D.extras)||[]).forEach(x=>{ const n=S.cur.orders.reduce((a,o)=>a+(((o.px&&o.px.x)||{})[x.n]||0),0); if(!n) return; const c=pr["x:"+x.id]||{}; L.push([x.n,n,c.b??0,c.v??c.b??0]); });
   P.forEach(p=>{ const x=q[p.id], c=pr[p.id]||{}; if(!x) return;
     if(p.cat==="box"){ if(x.bx) L.push([p.n,x.bx,c.b??p.p,c.v??c.b??p.p]); return; }
     if(x.q33) L.push([p.n+" 33 cl",x.q33,c.b33??p.p33,c.v33??c.b33??p.p33]);
@@ -468,8 +480,14 @@ function priceTable(prix,resale,scope,fm){
     <div class="bar"><span style="min-width:120px">Coffrets</span> + ${R("bx")} ${U} le coffret</div>
     <div class="bar"><button class="btn small primary" type="button" data-rule="${scope}">Appliquer</button><button class="btn small" type="button" data-rdef="${scope}">Valeurs par défaut</button><button class="btn small ghost" type="button" data-rsave>Enregistrer ces valeurs comme défaut</button></div>
     <p class="note">« Valeurs par défaut » remet les majorations (et le choix € ou %) que tu as enregistrées comme défaut.</p></div>`:"";
-  return fmtsHtml(fm,scope)+tools+`<div class="scroll"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  const so=scopeObj(scope)||{};
+  return fmtsHtml(fm,scope)+(so.pro?`<p class="note"><b>Vente Pro :</b> tous les prix saisis sont HT (TVA 20 % ajoutée sur la page de commande).</p>`:"")+tools+`<div class="scroll"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`+extrasTable(prix,scope,resale,!!so.pro);
 }
+function extrasTable(prix,scope,resale,pro){ const X=(D&&D.extras)||[];
+  if(!X.length) return `<p class="note">Magnums et coffrets montés : le catalogue de l’Espace n’est pas encore relié (Catalogue › Liaison avec l’Espace).</p>`;
+  const gs=[...new Set(X.map(x=>x.grp||"Autres"))];
+  return `<h3 style="margin:16px 0 4px">Magnums, coffrets montés et barriquées <span class="sub">catalogue de l’Espace${pro?" · prix HT":""}</span></h3><div class="scroll"><table><thead><tr><th>Article</th><th>Proposé</th><th class="num">${pro?"Prix HT":"Prix brasserie"}</th>${resale?'<th class="num">Prix de vente</th>':""}</tr></thead><tbody>${gs.map(g=>`<tr class="group"><td colspan="${resale?4:3}">${esc(g)}</td></tr>`+X.filter(x=>(x.grp||"Autres")===g).map(x=>{ const k="x:"+x.id, c=prix[k]||{on:false,b:null}, act=!!c.on;
+    return `<tr class="${act?"":"off"}"><td><b>${esc(x.n)}</b>${x.dispo?"":' <span class="tag">en rupture</span>'}<div class="sub">${esc([x.lib,x.s].filter(Boolean).join(" · "))}</div></td><td><input type="checkbox" class="switch" data-scope="${scope}" data-on="${k}" ${act?"checked":""} aria-label="Proposer ${esc(x.n)}"></td><td class="num"><input class="price" inputmode="decimal" data-scope="${scope}" data-pid="${k}" data-k="b" value="${fx(c.b)}" ${act?"":"disabled"} aria-label="Prix ${esc(x.n)}"></td>${resale?`<td class="num"><input class="price" inputmode="decimal" data-scope="${scope}" data-pid="${k}" data-k="v" value="${fx(c.v)}" ${act?"":"disabled"} aria-label="Prix de vente ${esc(x.n)}"></td>`:""}</tr>`; }).join("")).join("")}</tbody></table></div><p class="note">Proposés à l’unité, sans contrainte de carton. Un article en rupture dans l’Espace n’est pas commandable. Un article sans prix n’apparaît pas.</p>`; }
 function applyRule(prix,r,mode){ const add=(b,a)=>b==null?null:(mode==="pct"?Math.round(b*(1+a/100)*10)/10:+(b+a).toFixed(2));
   Object.entries(prix).forEach(([k,x])=>{ const p=byId[k]; if(!p) return; if(p.cat==="box"){x.v=add(x.b,r.bx);return;}
     const a33=p.cat==="soft"?r.so:p.cat==="speciale"?r.s33:r.c33, a75=p.cat==="speciale"?r.s75:r.c75; x.v33=add(x.b33,a33); if(p.cat!=="soft") x.v75=add(x.b75,a75); }); }
@@ -488,8 +506,8 @@ function vNouvelle(){
   <div class="head"><div><h1>Nouvelle vente</h1><p class="muted">Remplis les infos, choisis une grille de prix, ajuste si besoin.</p></div></div>
   <section class="card"><h2>1. Le client</h2>${infoFields(d,true)}</section>
   <section class="card"><h2>2. Le type de vente</h2>
-    <div class="seg" role="group" aria-label="Type de vente"><button type="button" data-ctype="std" data-scope="draft" aria-pressed="${!d.resale}">Standard</button><button type="button" data-ctype="resale" data-scope="draft" aria-pressed="${d.resale}">Revente avec marge</button></div>
-    <p class="note">${d.resale?"L’organisateur (asso, club…) t’achète au prix brasserie et revend au prix de vente. La page de commande affiche le prix de vente ; ton récap affiche les deux.":"Les acheteurs paient le prix brasserie. C’est le fonctionnement CSE actuel."}</p></section>
+    <div class="seg" role="group" aria-label="Type de vente"><button type="button" data-ctype="std" data-scope="draft" aria-pressed="${!d.resale&&!d.pro}">Standard</button><button type="button" data-ctype="resale" data-scope="draft" aria-pressed="${!!d.resale}">Revente avec marge</button><button type="button" data-ctype="pro" data-scope="draft" aria-pressed="${!!d.pro}">Pro (prix HT)</button></div>
+    <p class="note">${d.pro?"Vente réservée aux professionnels (ex. réseau BNI) : prix saisis HT, TVA 20 % ajoutée, formulaire entreprise (raison sociale, SIREN, adresse de facturation), bon de commande par e-mail, facture faite par la brasserie dans Super G. Pense à couper les formats inutiles et à activer les articles proposés plus bas.":d.resale?"L’organisateur (asso, club…) t’achète au prix brasserie et revend au prix de vente. La page de commande affiche le prix de vente ; ton récap affiche les deux.":"Les acheteurs paient le prix brasserie. C’est le fonctionnement CSE actuel."}</p></section>
   <section class="card"><h2>3. Les produits et les prix</h2>
     <div class="gcards">${gs.map(g=>`<button type="button" class="gcard ${d.grille===g.id?"sel":""}" data-pick="${esc(g.id)}"><h3>${esc(g.nom)}</h3><span class="note">${esc(g.desc)}</span><span>${Object.values(g.prix).filter(x=>x.on).length} produits ${g.resale?'<span class="tag resale">Revente</span>':""}</span></button>`).join("")}</div>
     ${priceTable(d.prix,d.resale,"draft",d.formats)}
@@ -538,7 +556,9 @@ function vgCardH(){ const role=D&&D.me?D.me.role:""; if(!(role==="admin"||role==
       ${V.rerr?`<p style="color:#B45309;margin:2px 0">Dernier envoi de réservation en échec : ${esc(V.rerr)}</p>`:""}
       <p class="muted" style="margin:2px 0">${V.attente?V.attente+" vente(s) en attente d’envoi à l’Espace.":"Aucun envoi de réservation en attente."}</p>
       <p style="margin:2px 0"><b>Envoi des réservations à l’Espace : ${V.resOn?"activé":"coupé"}</b>${adm?` <button class="btn small" type="button" data-vgon="${V.resOn?"":"1"}">${V.resOn?"Couper":"Activer"}</button>`:""}</p>
-      ${V.okAt?`<p class="muted" style="margin:2px 0">Dernier appel réussi à l’Espace : ${esc(V.okAt)}</p>`:""}`;
+      ${V.okAt?`<p class="muted" style="margin:2px 0">Dernier appel réussi à l’Espace : ${esc(V.okAt)}</p>`:""}
+      <p style="margin:2px 0"><b>Envoi des participants Pro à l’Espace (Clients à créer) : ${V.pcOn?"activé":"coupé"}</b>${adm?` <button class="btn small" type="button" data-vgpc="${V.pcOn?"":"1"}">${V.pcOn?"Couper":"Activer"}</button>`:""}${V.pcAtt?` <span class="muted">· ${V.pcAtt} en attente</span>`:""}</p>
+      ${V.pcErr?`<p style="color:#B45309;margin:2px 0">Dernier envoi de participant en échec : ${esc(V.pcErr)}</p>`:""}`;
   const keyH=adm?`<div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><input id="vg-key" type="password" autocomplete="off" spellcheck="false" placeholder="${V.key?"Remplacer la clé (vg_…)":"Clé VG_KEY (vg_…)"}" style="flex:1;min-width:220px"><button class="btn primary" type="button" data-vgkey>Enregistrer la clé</button></div>
     <p class="muted" style="margin:4px 0 0">La clé est vérifiée auprès de l’Espace, enregistrée côté serveur, puis plus jamais affichée.</p>`:"";
   const det=V.n?`<details style="margin-top:10px"><summary><b>Écarts de noms entre l’Espace et l’appli</b> (${(V.absentsEspace||[]).length+(V.nouveaux||[]).length+(V.noms||[]).length})</summary>
@@ -596,6 +616,29 @@ function vMails(){ const v=S.cur.vente, R=v.rel||{off:false,log:{},stop:0}, L=R.
     <p class="note">« M’envoyer un test » t’envoie le mail à toi seul, avec [TEST] dans l’objet.</p></section>
   ${S.relPrev?`<section class="card"><div class="head"><div><h2>Aperçu</h2><p class="note">Objet : <b>${esc(S.relPrev.subject)}</b></p></div><button class="btn small" type="button" data-relclose>Fermer</button></div><iframe title="Aperçu du mail" srcdoc="${esc('<!doctype html><meta charset=utf-8><body style="margin:0">'+S.relPrev.html)}" style="width:100%;height:1100px;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe></section>`:""}`;
 }
+function vFacturer(){ const F=S.fac;
+  if(!F) return `<div class="head"><div><h1>À facturer dans Super G</h1></div></div><p class="muted">Chargement…</p>`;
+  const todo=F.filter(r=>!r.fac), done=F.filter(r=>r.fac), sum=(a,k)=>a.reduce((s,r)=>s+(r[k]||0),0);
+  const byV={}; F.forEach(r=>{ const x=byV[r.code]=byV[r.code]||{vente:r.vente,n:0,a:0,ht:0,tva:0,ttc:0}; x.n++; if(!r.fac) x.a++; x.ht+=r.ht; x.tva+=r.tva; x.ttc+=r.ttc; });
+  const cp=(v,l)=>v?`<button class="btn small ghost" type="button" data-copy="${esc(v)}" title="Copier ${esc(l)}">${esc(v)} ⧉</button>`:"";
+  const card=r=>{ const neuf=/à créer/.test(r.fiche||""), att=!r.fiche;
+    return `<section class="card" style="${r.fac?"opacity:.55":""}"><div class="head"><div><h2 style="margin:0">${esc(r.rs)}</h2><p class="sub">${esc(r.vente)} · commande n°${esc(r.nv||r.n)} du ${esc(r.date)}</p></div>
+      <label class="bar" style="font-size:14px;font-weight:600"><input type="checkbox" class="switch" data-facture="${r.n}" ${r.fac?"checked":""}> ✓ Facturé dans Super G</label></div>
+      ${r.fac?`<p class="note">Facturé : ${esc(r.fac)}</p>`:""}
+      <div style="border:1px solid var(--line,#ddd);border-radius:10px;padding:10px;margin:8px 0;${neuf||att?"background:var(--accent-soft,#eef7f3)":""}"><b>${neuf||att?"Fiche à créer dans Super G":"Client déjà dans Super G"}</b>${r.fiche?` <span class="tag">${esc(r.fiche)}</span>`:` <span class="tag">pas encore envoyé à l’Espace</span>`}
+        <div class="bar" style="flex-wrap:wrap;gap:6px;margin-top:6px">${cp(r.rs,"la raison sociale")}${cp(r.siren,"le SIREN")}${cp(r.rue,"l’adresse")}${cp(r.cp,"le code postal")}${cp(r.ville,"la ville")}${cp(r.contact,"le contact")}${cp(r.tel,"le téléphone")}${cp(r.email,"le mail")}</div></div>
+      <div class="scroll"><table><thead><tr><th>Article</th><th class="num">Montant HT</th></tr></thead><tbody>${(r.lines||[]).map(l=>`<tr><td>${esc(l.label)}</td><td class="num">${eur(l.montant)}</td></tr>`).join("")}
+        <tr><td><b>Total HT</b></td><td class="num"><b>${eur(r.ht)}</b></td></tr><tr><td>TVA 20 %</td><td class="num">${eur(r.tva)}</td></tr><tr><td><b>Total TTC</b></td><td class="num"><b>${eur(r.ttc)}</b></td></tr></tbody></table></div></section>`; };
+  return `<div class="head"><div><h1>À facturer dans Super G</h1><p class="muted">Commandes des ventes Pro. L’appli n’écrit jamais dans Super G : tu crées la fiche et la facture, puis tu coches.</p></div>
+    <div class="bar"><button class="btn" type="button" data-facref>Actualiser</button><button class="btn" type="button" data-facxls>Exporter (xlsx)</button></div></div>
+  <div class="kpis"><div class="kpi"><b>${todo.length}</b><span>facture${todo.length>1?"s":""} à éditer dans Super G</span></div><div class="kpi"><b>${eur(sum(todo,"ht"))}</b><span>HT à facturer</span></div><div class="kpi"><b>${eur(sum(todo,"ttc"))}</b><span>TTC à facturer</span></div><div class="kpi"><b>${done.length}</b><span>déjà facturée${done.length>1?"s":""}</span></div></div>
+  <section class="card"><h2>Récap par vente</h2><div class="scroll"><table><thead><tr><th>Vente</th><th class="num">Commandes</th><th class="num">À facturer</th><th class="num">HT</th><th class="num">TVA</th><th class="num">TTC</th></tr></thead><tbody>${Object.values(byV).map(x=>`<tr><td>${esc(x.vente)}</td><td class="num">${x.n}</td><td class="num">${x.a}</td><td class="num">${eur(x.ht)}</td><td class="num">${eur(x.tva)}</td><td class="num">${eur(x.ttc)}</td></tr>`).join("")||`<tr><td colspan="6" class="muted">Aucune vente Pro pour l’instant.</td></tr>`}
+    ${F.length?`<tr><td><b>Toutes les ventes Pro</b></td><td class="num"><b>${F.length}</b></td><td class="num"><b>${todo.length}</b></td><td class="num"><b>${eur(sum(F,"ht"))}</b></td><td class="num"><b>${eur(sum(F,"tva"))}</b></td><td class="num"><b>${eur(sum(F,"ttc"))}</b></td></tr>`:""}</tbody></table></div></section>
+  ${todo.map(card).join("")}${done.length?`<h2 style="margin-top:18px">Déjà facturées</h2>${done.map(card).join("")}`:""}`; }
+function facXls(){ if(!window.XLSX){ toast("Le module Excel n’a pas pu se charger. Vérifie ta connexion."); return; }
+  const a=[["Vente","N°","Date","Raison sociale","SIREN","Adresse","Code postal","Ville","Contact","Téléphone","E-mail","Fiche Espace","Articles","HT","TVA","TTC","Facturé dans Super G"]];
+  (S.fac||[]).forEach(r=>a.push([r.vente,r.nv||r.n,r.date,r.rs,r.siren,r.rue,r.cp,r.ville,r.contact,r.tel,r.email,r.fiche,(r.lines||[]).map(l=>l.label).join(" ; "),r.ht,r.tva,r.ttc,r.fac||""]));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),"À facturer"); XLSX.writeFile(wb,"a-facturer-super-g.xlsx"); }
 function vContacts(){
   const C=S.contacts;
   const head=`<div class="head"><div><h1>Contacts</h1><p class="muted">Les acheteurs des ventes groupées. Données personnelles : réservé à la brasserie.</p></div>`;
@@ -621,10 +664,11 @@ function render(){
   if(S.view!=="login" && !D){ a.innerHTML=`<p class="muted">Chargement…</p>`; return; }
   const role=D&&D.me?D.me.role:""; document.body.className="r"+({admin:4,gestion:3,commercial:2,lecture:1}[role]||0);
   const na=document.getElementById("navAcces"); if(na) na.hidden=role!=="admin";
+  const nf=document.getElementById("navFact"); if(nf) nf.hidden=role!=="admin";
   const nc=document.getElementById("navContacts"); if(nc) nc.hidden=!(role==="admin"||role==="gestion");
   const who=document.getElementById("who"); if(who) who.innerHTML=S.view!=="login"&&D&&D.me?`${esc(D.me.email)} · ${ROLE_LAB[role]||role} · <button class="back" type="button" data-logout>Se déconnecter</button>`:"";
   setTimeout(()=>{ if(S.view==="login") gisButton(); },0);
-  a.innerHTML = vgBanner() + (S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():S.view==="contacts"?vContacts():vCatalogue());
+  a.innerHTML = vgBanner() + (S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():S.view==="contacts"?vContacts():S.view==="facturer"?vFacturer():vCatalogue());
 }
 function vgBanner(){ if(S.view==="login"||!D) return ""; const e=S.vg&&S.vg.key!==undefined?{bad:S.vg.bad,ok:S.vg.okAt}:(D.vgEtat||{}); if(!e||!e.bad) return "";
   return `<section class="card" role="alert" style="background:#C0392B;color:#fff;border-color:#C0392B"><b>Liaison avec l’Espace coupée : l’Espace répond « clé invalide »</b> (depuis le ${esc(e.bad)}).<br>Dernier appel réussi : ${e.ok?esc(e.ok):"aucun"}. Les ruptures et le stock viennent de la dernière copie (24 h maximum). Recolle une clé valide dans Catalogue › Liaison avec l’Espace.</section>`; }
@@ -639,16 +683,17 @@ async function openVente(code){ const tab=S.view==="vente"&&S.cur&&S.cur.vente.c
   const j=await api("vente",{code}); setCur(j.data); go("vente",{tab,exp:null}); }
 function setCur(data){ S.cur=data; S.typed=false; if(data&&data.vente) VC[data.vente.code]=data; const v=data.vente, c=data.config;
   S.edit={nom:v.nom,code:v.code,resp:v.resp,email:v.email,tel:v.tel,limite:v.limite,livraison:v.livraison,lieu:v.lieu,livraisonTxt:v.livraisonTxt,
-    creneau:v.creneau,contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
+    creneau:v.creneau,contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,pro:!!c.pro,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
   const i=D.ventes.findIndex(x=>x.code===v.code); const sv=Object.assign({},v,{configured:c.configured}); if(i>=0) D.ventes[i]=sv; else D.ventes.unshift(sv); }
 function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email,tel:d.tel,limite:d.limite,livraison:d.livraison,livraisonTxt:d.livraison?"":d.livraisonTxt,lieu:d.lieu,creneau:d.creneau,contact:d.contact,message:d.message,paiement:d.paiement}; }
-function cfgOf(d){ return {resale:d.resale,grille:d.grille||"",formats:d.formats,prix:d.prix}; }
+function cfgOf(d){ return {resale:!!d.resale&&!d.pro,pro:!!d.pro,grille:d.grille||"",formats:d.formats,prix:d.prix}; }
 
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,[data-open]"); if(!t) return; const d=t.dataset;
   if(d.logout!==undefined){ logout(); return; }
   if(d.vgkey!==undefined){ const k=($("#vg-key")||{}).value||""; if(!k.trim()){ toast("Colle d’abord la clé"); return; } run("",async()=>{ const j=await api("vgKey",{key:k.trim()}); S.vg=j.data; render(); toast("Clé enregistrée : catalogue de l’Espace copié"); }); return; }
   if(d.vgon!==undefined){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const j=await api("vgResOn",{on:d.vgon==="1"}); S.vg=j.data; render(); toast(j.data.resOn?"Envoi des réservations activé":"Envoi des réservations coupé"); }); return; }
+  if(d.vgpc!==undefined){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const j=await api("vgPcOn",{on:d.vgpc==="1"}); S.vg=j.data; render(); toast(j.data.pcOn?"Envoi des participants Pro activé":"Envoi des participants Pro coupé"); }); return; }
   if(d.vgref!==undefined){ run("",async()=>{ const j=await api("vgRefresh"); S.vg=j.data; render(); toast("Catalogue de l’Espace actualisé"); }); return; }
   if(d.vgimp!==undefined){ run("",async()=>{ const j=await api("vgInfo",{impact:1}); S.vg=j.data; render(); }); return; }
   if(d.vgres!==undefined){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer l’envoi"; return; } run("",async()=>{ const j=await api("vgResAll"); S.vg=j.data; render(); toast(j.n+" vente(s) envoyée(s) à l’Espace"); }); return; }
@@ -656,6 +701,8 @@ document.addEventListener("click",e=>{
   if(d.acadd!==undefined){ const em=$("#ac-email").value.trim(), ro=$("#ac-role").value; if(!em){ toast("Indique l’adresse Google"); return; } run("",async()=>{ const r=await api("saveAcces",{email:em,role:ro}); S.acces=r.acces; render(); toast("Accès donné à "+em); }); return; }
   if(d.acdel){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const r=await api("saveAcces",{email:d.acdel,role:""}); S.acces=r.acces; render(); toast("Accès retiré"); }); return; }
   if(d.login!==undefined){ const m=($("#lk").value.match(/k=([A-Za-z0-9]+)/)||[])[1]; if(!m){ toast("Ce lien ne contient pas de clé (#k=…)"); return; } KEY=m; try{localStorage.setItem("bs_espace_k",m);}catch(err){} S.view="ventes"; run("",async()=>{await load(); render();}); return; }
+  if(d.nav==="facturer"||d.facref!==undefined){ go("facturer"); if(d.nav) S.fac=S.fac||null; render(); run("",async()=>{ const r=await api("aFacturer"); S.fac=r.rows||[]; render(); }); return; }
+  if(d.facxls!==undefined){ facXls(); return; }
   if(d.nav&&d.nav!=="contacts"){ go(d.nav,{gedit:null,newProd:null,catEdit:d.nav==="catalogue"?catInit():S.catEdit}); return; }
   if(d.refresh!==undefined){ run("",async()=>{await load(); render(); toast("À jour");}); return; }
   if(d.open){ run("",()=>openVente(d.open)); return; }
@@ -671,6 +718,7 @@ document.addEventListener("click",e=>{
   if(d.cbrevo!==undefined){ run("",async()=>{ const r=await api("brevoSync"); toast(r.n+" abonné"+(r.n>1?"s":"")+" sur "+r.total+" envoyé"+(r.n>1?"s":"")+" vers Brevo"); }); return; }
   if(d.exp){ S.exp=d.exp; render(); return; }
   if(d.xls){ xls(d.xls); return; }
+  if(d.distprint!==undefined){ distPrint(); return; }
   if(d.copy){ copy(d.copy); return; }
   if(d.confirmdate!==undefined){ run("",async()=>{ const j=await api("confirmDate",{code:S.cur.vente.code}); setCur(j.data); render(); toast("Date confirmée : l’organisateur est prévenu par e-mail"); }); return; }
   if(d.confirmalt!==undefined){ const x=$("#altdate").value; if(!x){ toast("Choisis d’abord une date"); return; } run("",async()=>{ const j=await api("confirmDate",{code:S.cur.vente.code,livraison:x}); setCur(j.data); render(); toast("Nouvelle date confirmée : l’organisateur est prévenu par e-mail"); }); return; }
@@ -682,7 +730,7 @@ document.addEventListener("click",e=>{
   if(d.saveinfos!==undefined){ run("",async()=>{ const j=await api("saveVente",{orig:S.cur.vente.code,vente:venteFields(S.edit),config:cfgOf(Object.assign({},S.cur.config,{prix:fillPrix(S.cur.config.prix)}))}); setCur(j.data); render(); toast("Infos enregistrées"); }); return; }
   if(d.saveprix!==undefined){ run("",async()=>{ const j=await api("saveVente",{orig:S.cur.vente.code,vente:venteFields(S.cur.vente),config:cfgOf(S.edit)}); setCur(j.data); render(); toast("Produits et prix enregistrés"); }); return; }
   if(d.new!==undefined){ const g=grillesAll()[0]; S.draft={nom:"",code:"",resp:"",email:"",tel:"",limite:"",livraison:"",lieu:"",resale:false,grille:"cse",formats:clone(g.formats),prix:clone(g.prix),saveAs:false,saveName:""}; go("nouvelle"); return; }
-  if(d.ctype){ const o=scopeObj(d.scope); o.resale=d.ctype==="resale"; if(o.resale&&!hasV(o.prix)) applyRule(o.prix,S.rule.eur,"eur"); render(); return; }
+  if(d.ctype){ const o=scopeObj(d.scope); o.resale=d.ctype==="resale"; o.pro=d.ctype==="pro"; if(o.resale&&!hasV(o.prix)) applyRule(o.prix,S.rule.eur,"eur"); render(); return; }
   if(d.pick!==undefined){ const g=grillesAll().find(x=>x.id===d.pick); Object.assign(S.draft,{grille:g.id,prix:fillPrix(g.prix),formats:clone(g.formats),resale:g.resale}); render(); return; }
   if(d.rmode){ S.rmode=d.rmode; render(); return; }
   if(d.rdef!==undefined){ resetRule(); render(); toast("Valeurs par défaut remises : clique sur Appliquer pour recalculer"); return; }
@@ -712,12 +760,14 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr.row")){ e.preventDefault(); run("",()=>openVente(e.target.dataset.open)); } });
 document.addEventListener("change",async e=>{ const el=e.target, d=el.dataset; if(S.view==="vente") S.typed=true;
+  if(d.facture){ const n=+d.facture, on=el.checked, r=(S.fac||[]).find(x=>x.n===n); if(!r) return; const old=r.fac; r.fac=on?"à l’instant · "+((D.me&&D.me.email)||""):""; render(); toast(on?"Marquée facturée":"Remise à facturer");
+    later(async()=>{ const j=await api("facture",{n,on}); r.fac=j.fac||""; if(S.view==="facturer") render(); }, ()=>{ r.fac=old; if(S.view==="facturer") render(); }); return; }
   if(d.relauto!==undefined){ const on=el.checked; run("",async()=>{ const j=await api("relAuto",{code:S.cur.vente.code,on}); setCur(j.data); render(); toast(on?"Relances automatiques activées":"Relances automatiques coupées pour cette vente"); }); return; }
   if(d.haallow!==undefined){ const allow=el.checked; run("",async()=>{ const j=await api("haAllow",{code:S.cur.vente.code,allow}); S.cur.ha=j.ha; render(); toast(allow?"Paiement HelloAsso proposé à l’organisateur":"Option HelloAsso retirée"); }); return; }
   if(d.acrole){ run("",async()=>{ const r=await api("saveAcces",{email:d.acrole,role:el.value}); S.acces=r.acces; render(); toast("Accès modifié"); }); return; }
-  if(d.on){ scopeObj(d.scope).prix[d.on].on=el.checked; render(); return; }
+  if(d.on){ const pr=scopeObj(d.scope).prix; pr[d.on]=pr[d.on]||{on:false,b:null}; pr[d.on].on=el.checked; render(); return; }
   if(d.fmt){ const f=scopeObj(d.scope).formats; f[d.fmt]=el.checked; if(!Object.values(f).some(Boolean)){ f[d.fmt]=true; toast("Garde au moins un format"); } render(); return; }
-  if(d.pid){ scopeObj(d.scope).prix[d.pid][d.k]=num(el.value); return; }
+  if(d.pid){ const pr=scopeObj(d.scope).prix; pr[d.pid]=pr[d.pid]||{on:false,b:null}; pr[d.pid][d.k]=num(el.value); return; }
   if(d.rk){ S.rule[S.rmode][d.rk]=num(el.value)||0; return; }
   if(d.cdispo){ S.catEdit[d.cdispo].dispo=el.checked; render(); return; }
   if(d.cid){ S.catEdit[d.cid][d.ck]=num(el.value); return; }
