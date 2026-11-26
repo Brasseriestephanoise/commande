@@ -47,7 +47,11 @@ function get(q) {
 // La page elle-même (app.html) est servie par GitHub, rapide ; secours : la copie du Google Sheet.
 var app = fetch("app.html?v=" + Date.now()).then(function(r){ if(!r.ok) throw 0; return r.text(); })
   .catch(function(){ return get("?api=app"); });
-var data = (P.get("cse") && !P.get("desinscription"))
+/* Copie locale (VG-3) : si la page a déjà été ouverte sur cet appareil, on l'affiche tout de suite ; app.html va chercher la version fraîche lui-même. */
+var copie = false;
+try { var cs = String(P.get("cse") || "").toLowerCase(), raw = localStorage.getItem((P.has("cle") ? "vg_sv_" : "vg_pg_") + cs), x = raw ? JSON.parse(raw) : null;
+  if (x && x.s && !P.has("ha")) copie = P.has("cle") ? (x.k === String(P.get("cle")) && (!x.lim || x.lim >= new Date().toISOString().slice(0, 10))) : (Date.now() - x.t < 7 * 864e5); } catch (e) {}
+var data = (P.get("cse") && !P.get("desinscription") && !copie)
   ? get(P.has("cle") ? "?api=suivi&cse=" + encodeURIComponent(P.get("cse")) + "&cle=" + encodeURIComponent(P.get("cle")) : "?api=page&cse=" + encodeURIComponent(P.get("cse"))).then(function(s){ return JSON.parse(s); }).catch(function(){ return null; })
   : Promise.resolve(null);
 Promise.all([app, data])
