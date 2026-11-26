@@ -497,7 +497,7 @@ function infoFields(d, isNew){
   const f=(k,l,ph,type="text")=>`<div class="field"><label for="d-${k}">${l}</label><input id="d-${k}" data-d="${k}" type="${type}" placeholder="${esc(ph)}" value="${esc(d[k]||"")}" ${k==="code"&&!isNew?"disabled":""}></div>`;
   return `<div class="grid2">${f("nom","Nom de la vente","Ex. APE École Jules Ferry")}${f("code","Code du lien",isNew?"se remplit tout seul":"")}
     ${f("resp","Responsable","Prénom Nom")}${f("email","E-mail du responsable","Pour lui envoyer son lien de suivi","email")}${f("tel","Téléphone du responsable","")}
-    ${f("limite","Date limite de commande","","date")}${f("livraison","Date de livraison / retrait","","date")}${f("lieu","Lieu de livraison","Ex. Accueil du site")}${f("creneau","Créneau de retrait","Ex. vendredi 16 h 30 – 18 h")}${f("contact","Contact sur place (affiché aux acheteurs)","Ex. Marie, 06 12 34 56 78")}${f("paiement","Modalités de paiement","Ex. chèque à l’ordre de l’APE")}${f("message","Message d’accueil (page de commande)","Ex. Vente au profit du voyage des CM2")}</div>
+    ${f("limite","Date limite de commande","","date")}${f("livraison","Date de livraison / retrait","","date")}${f("lieu","Lieu de livraison","Ex. Accueil du site")}${f("creneau","Créneau de retrait","Ex. vendredi 16 h 30 – 18 h")}${f("contact","Contact sur place (affiché aux acheteurs)","Ex. Marie, 06 12 34 56 78")}${f("paiement","Modalités de paiement","Ex. chèque à l’ordre de l’APE")}${f("par","« Commande organisée par » (page de commande)","Vide = nom de la vente")}${f("message","Message d’accueil (page de commande)","Ex. Vente au profit du voyage des CM2")}</div>
     ${isNew?"":`<p class="note">Le code du lien ne change plus une fois la vente créée : les liens ont peut-être déjà été envoyés.</p>`}`;
 }
 function vNouvelle(){
@@ -683,9 +683,9 @@ async function openVente(code){ const tab=S.view==="vente"&&S.cur&&S.cur.vente.c
   const j=await api("vente",{code}); setCur(j.data); go("vente",{tab,exp:null}); }
 function setCur(data){ S.cur=data; S.typed=false; if(data&&data.vente) VC[data.vente.code]=data; const v=data.vente, c=data.config;
   S.edit={nom:v.nom,code:v.code,resp:v.resp,email:v.email,tel:v.tel,limite:v.limite,livraison:v.livraison,lieu:v.lieu,livraisonTxt:v.livraisonTxt,
-    creneau:v.creneau,contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,pro:!!c.pro,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
+    creneau:v.creneau,par:v.par||"",contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,pro:!!c.pro,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
   const i=D.ventes.findIndex(x=>x.code===v.code); const sv=Object.assign({},v,{configured:c.configured}); if(i>=0) D.ventes[i]=sv; else D.ventes.unshift(sv); }
-function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email,tel:d.tel,limite:d.limite,livraison:d.livraison,livraisonTxt:d.livraison?"":d.livraisonTxt,lieu:d.lieu,creneau:d.creneau,contact:d.contact,message:d.message,paiement:d.paiement}; }
+function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email,tel:d.tel,limite:d.limite,livraison:d.livraison,livraisonTxt:d.livraison?"":d.livraisonTxt,lieu:d.lieu,creneau:d.creneau,contact:d.contact,message:d.message,paiement:d.paiement,par:d.par}; }
 function cfgOf(d){ return {resale:!!d.resale&&!d.pro,pro:!!d.pro,grille:d.grille||"",formats:d.formats,prix:d.prix}; }
 
 document.addEventListener("click",e=>{
