@@ -163,6 +163,13 @@ h2{font-size:21px;margin:0;font-weight:700;text-wrap:balance}
 .box.has{border-color:var(--brand)}
 .box img{width:84px;height:96px;object-fit:cover;border-radius:9px}
 .old{display:block;font-size:13px;color:var(--muted);text-decoration:line-through}
+.oldl{display:block;font-size:13px;color:var(--muted)}.oldl s{white-space:nowrap}
+.taxb{display:block;margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--gold-bg);color:var(--gold);font-weight:800;font-size:17px;line-height:1.3}
+.taxb.big{font-size:20px;padding:12px 14px;margin-top:14px}
+.taxb.s{font-size:14px;padding:7px 10px;margin:8px 0 0;width:100%}
+.ptab{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}.ptab th{font-size:11px;text-align:right;padding:6px 3px;border-bottom:2px solid var(--ink);color:var(--muted);font-weight:700}.ptab td{text-align:right;padding:7px 3px;border-bottom:1px solid var(--line);vertical-align:top}.ptab th:first-child,.ptab td:first-child{text-align:left;padding-left:0}.ptab td:last-child,.ptab th:last-child{padding-right:0;white-space:nowrap}
+.ptot{margin:10px 0 0 auto;border-collapse:collapse;font-variant-numeric:tabular-nums}.ptot td{padding:3px 0 3px 18px;text-align:right;white-space:nowrap}.ptot tr.t td{font-weight:800;font-size:19px;border-top:2px solid var(--ink);padding-top:8px}
+.sendov{position:fixed;inset:0;z-index:99;background:rgba(20,18,16,.55);display:flex;align-items:center;justify-content:center;padding:24px}.sendov>div{background:var(--surface);color:var(--ink);border-radius:16px;padding:22px 20px;max-width:340px;text-align:center;box-shadow:var(--shadow)}.sendov b{display:block;font-size:19px;margin:12px 0 6px}.sendov i{display:inline-block;width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--brand);animation:sp 0.9s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
 .save{font-size:12px;font-weight:700;color:var(--brand)}
 .compo{display:grid;gap:8px}
 .mybox{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
@@ -339,12 +346,13 @@ const QUI = CSE.qui || "votre CSE", ISCSE = QUI==="votre CSE";
 const RG = DATA.rgpd;
 const BEERS = DATA.beers.map(b=>Object.assign(b,{c:(/^#2[0-3]1[ef]2[0-1]$/i.test(b.c)?"var(--ink)":b.c)}));
 const BOXES = DATA.boxes;
-const EXTRAS = DATA.extras||[], PRO = !!CSE.pro, TVA = CSE.tva||0.2, HT = PRO?" HT":"";
+const EXTRAS = DATA.extras||[], PRO = !!CSE.pro, TVA = CSE.tva||0.2, HT = PRO?" HT":" TTC", tx = v => eur(v)+HT;
+const TAXB = cls => `<p class="taxb ${cls||""}">${PRO?"Tarifs professionnels – tous les prix sont HT, TVA 20 % en sus":"Prix TTC, toutes taxes comprises"}</p>`;
 const xCount = () => Object.values(S.x).reduce((a,b)=>a+b,0);
 const xAmount = () => EXTRAS.reduce((a,x)=>a+(S.x[x.id]||0)*x.p,0);
 const tvaOf = () => Math.round(total()*TVA*100)/100;
 const xLabel = () => { const t=new Set(EXTRAS.map(x=>x.t)); return [t.has("magnum")?"Magnums":"",t.has("coffret")?"Coffrets montés":"",t.has("barrique")?"Barriquées":""].filter(Boolean).join(" · ")||"Articles"; };
-const range = arr => { const mn=Math.min(...arr), mx=Math.max(...arr); return mn===mx?eur(mn):eur(mn).replace(" €","")+" – "+eur(mx); };
+const range = arr => { const mn=Math.min(...arr), mx=Math.max(...arr); return mn===mx?tx(mn):eur(mn).replace(" €","")+" – "+tx(mx); };
 const groupPrice = (g,f) => { const b=BEERS.find(x=>x.g===g); return b?price(b,f):0; };
 const S = {screen:"home", tab:"33", person:{nom:"",prenom:"",service:"",tel:"",email:"",news:false,majeur:false,rs:"",siren:"",rue:"",cp:"",ville:""}, q:{"33":{},"75":{},"soft":{}}, x:{}, boxes:[], compose:null, errors:{}};
 window.__vgIdle = () => S.screen==="home" && !Object.values(S.q).some(o=>Object.values(o).some(Boolean)) && !S.boxes.length && !Object.values(S.x).some(Boolean);
@@ -377,8 +385,8 @@ const TABS = () => { const t=[], b=B33(), so=SOFTS();
   if(F.b33&&b.length) t.push(["33",mix33?"33 cl + softs":"33 cl",range(b.map(x=>x.p33).concat(mix33?so.map(x=>x.p33):[]))]);
   const b75=b.filter(x=>!x.x75); if(F.b75&&b75.length) t.push(["75","75 cl",range(b75.map(x=>x.p75))]);
   if(F.soft&&so.length&&!mix33) t.push(["soft","Softs",range(so.map(x=>x.p33))]);
-  if(F.box&&BOXES.length) t.push(["box","Coffrets","dès "+eur(Math.min(...BOXES.map(x=>x.p)))]);
-  if(EXTRAS.length) t.push(["x",xLabel(),"dès "+eur(Math.min(...EXTRAS.map(x=>x.p)))+HT]);
+  if(F.box&&BOXES.length) t.push(["box","Coffrets","dès "+tx(Math.min(...BOXES.map(x=>x.p)))]);
+  if(EXTRAS.length) t.push(["x",xLabel(),"dès "+tx(Math.min(...EXTRAS.map(x=>x.p)))]);
   return t; };
 const plural = (n,s,p) => n+" "+(n>1?(p||s+"s"):s);
 
@@ -387,7 +395,7 @@ function stepsHtml(cur){
   const ci=order.indexOf(cur);
   return `<nav class="steps" aria-label="Étapes">${order.map((k,i)=>`<span class="${i===ci?"on":i<ci?"done":""}">${i+1}. ${lab[k]}</span>`).join("")}</nav>`;
 }
-function topBar(cur){ return `<div class="top"><span class="logo"><img src="https://brasseriestephanoise.github.io/commande/img/logo.png" alt="La Brasserie Stéphanoise"></span>${cur?stepsHtml(cur):""}</div>`; }
+function topBar(cur){ return `<div class="top"><span class="logo"><img src="https://brasseriestephanoise.github.io/commande/img/logo.png" alt="La Brasserie Stéphanoise"></span>${cur?stepsHtml(cur):""}${PRO&&S.screen!=="home"?TAXB("s"):""}</div>`; }
 const demo = "";
 
 function render(){
@@ -406,7 +414,7 @@ function homeHtml(){
   <section class="hero">
     <p class="eyebrow">Commande groupée</p>
     <h1>${PRO?"Bières bio de Saint-Étienne : commande groupée pour les professionnels":ISCSE?"Les bières bio de Saint-Étienne, livrées à votre travail":"Les bières bio de Saint-Étienne, en commande groupée"}</h1>
-    <div class="cse"><span class="lead">Commande organisée par</span>${CSE.limiteCourt?`<span class="dl">Date limite<strong>${CSE.limiteCourt}</strong></span>`:""}<b>${esc(CSE.nom)}</b></div>${CSE.message?`<p class="lead" style="margin-top:14px;white-space:pre-line">${esc(CSE.message)}</p>`:""}
+    <div class="cse"><span class="lead">Commande organisée par</span>${CSE.limiteCourt?`<span class="dl">Date limite<strong>${CSE.limiteCourt}</strong></span>`:""}<b>${esc(CSE.par||CSE.nom)}</b></div>${TAXB(PRO?"big":"")}${CSE.message?`<p class="lead" style="margin-top:14px;white-space:pre-line">${esc(CSE.message)}</p>`:""}
   </section>
   ${CSE.ouvert?"":`<p class="closed">Les commandes sont closes${CSE.limite?" depuis le "+CSE.limite:""}. Rapprochez-vous de ${QUI} pour toute question.</p>`}
   ${vitrineHtml()}
@@ -510,7 +518,7 @@ function catalogueHtml(){
       <div class="pic">${plateImg(b,"Étiquette "+esc(b.n))}</div>
       <div><h3>${esc(b.n)}${pastille(b,true)}</h3><p class="meta">${esc(b.s)}${b.d?" · "+esc(b.d):""}</p>${b.dev?`<p class="dev">${esc(b.dev)}</p>`:""}
       ${b.desc?`<p class="d">${esc(b.desc)}</p>`:""}${b.med&&b.med.length?`<ul>${b.med.map(m=>`<li>${esc(m)}</li>`).join("")}</ul>`:""}
-      <div class="px">${px(b).map(([f,p])=>`<span>${f} · ${eur(p)}</span>`).join("")}</div></div></article>`).join("")}</div>`; }).join("")}
+      <div class="px">${px(b).map(([f,p])=>`<span>${f} · ${tx(p)}</span>`).join("")}</div></div></article>`).join("")}</div>`; }).join("")}
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
 }
 function beerRow(b,f){
@@ -519,23 +527,23 @@ function beerRow(b,f){
   return `<article class="beer${q?" has":""}${no?" off":""}" style="--c:${b.c}${no?";opacity:.55":""}">
     <div class="plate" data-info="${b.id}" role="button" tabindex="0" aria-label="Voir la fiche ${esc(b.n)}">${plateImg(b)}</div>
     <div class="info"><button class="name" data-info="${b.id}">${esc(b.n)}</button>
-      <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${eur(price(b,f))}${HT}${pBout(b,f)>price(b,f)?` <span class="old">${eur(pBout(b,f))}</span>`:""}</span>${pBout(b,f)>price(b,f)?`<span class="save">${eur(pBout(b,f)-price(b,f))} d’économie</span>`:""}
+      <span class="meta">${esc(b.s)} · ${b.d}</span><span class="price">${tx(price(b,f))}${pBout(b,f)>price(b,f)?` <span class="oldl">Prix boutique <s>${tx(pBout(b,f))}</s></span>`:""}</span>${pBout(b,f)>price(b,f)?`<span class="save">${tx(pBout(b,f)-price(b,f))} d’économie</span>`:""}
       ${pastille(b)?`<span style="margin-top:3px">${pastille(b,true).replace("pas ","pas ").replace('class="pas','style="margin-left:0" class="pas')}</span>`:""}<button type="button" class="fl" data-info="${b.id}">Voir la fiche ›</button>${no?`<span class="meta" style="color:#B45309;font-weight:700">En rupture</span>`:""}</div>
     <div class="stepper"><div class="row">
       <button class="sbtn" data-dec="${b.id}" data-f="${f}" aria-label="Retirer une ${esc(b.n)}" ${q?"":"disabled"}>−</button>
       <span class="qty" id="q-${f}-${b.id}" aria-live="polite">${q}</span>
       <button class="sbtn plus" data-inc="${b.id}" data-f="${f}" aria-label="Ajouter une ${esc(b.n)}" ${no?"disabled":""}>+</button></div>
-      <span class="sub">${q?eur(q*price(b,f)):""}</span></div>
+      <span class="sub">${q?tx(q*price(b,f)):""}</span></div>
   </article>`;
 }
 function xRow(x){ const q=S.x[x.id]||0, no=!!x.x;
   return `<article class="beer${q?" has":""}${no?" off":""}" style="--c:var(--brand)${no?";opacity:.55":""}">
     <div class="plate">${x.img?`<img src="${esc(x.img)}" alt="" loading="lazy" decoding="async">`:`<span class="noimg" style="--c:var(--brand)">${esc(x.n.replace(/^(La |Le |L’|L')/,"").slice(0,2))}</span>`}</div>
-    <div class="info"><span class="name">${esc(x.n)}</span><span class="meta">${esc([x.lib,x.s,x.d].filter(Boolean).join(" · "))}</span><span class="price">${eur(x.p)}${HT}</span>${no?`<span class="meta" style="color:#B45309;font-weight:700">En rupture</span>`:""}</div>
-    <div class="stepper"><div class="row"><button class="sbtn" data-xdec="${x.id}" aria-label="Retirer ${esc(x.n)}" ${q?"":"disabled"}>−</button><span class="qty" id="q-x-${x.id}" aria-live="polite">${q}</span><button class="sbtn plus" data-xinc="${x.id}" aria-label="Ajouter ${esc(x.n)}" ${no?"disabled":""}>+</button></div><span class="sub">${q?eur(q*x.p)+HT:""}</span></div>
+    <div class="info"><span class="name">${esc(x.n)}</span><span class="meta">${esc([x.lib,x.s,x.d].filter(Boolean).join(" · "))}</span><span class="price">${tx(x.p)}</span>${no?`<span class="meta" style="color:#B45309;font-weight:700">En rupture</span>`:""}</div>
+    <div class="stepper"><div class="row"><button class="sbtn" data-xdec="${x.id}" aria-label="Retirer ${esc(x.n)}" ${q?"":"disabled"}>−</button><span class="qty" id="q-x-${x.id}" aria-live="polite">${q}</span><button class="sbtn plus" data-xinc="${x.id}" aria-label="Ajouter ${esc(x.n)}" ${no?"disabled":""}>+</button></div><span class="sub">${q?tx(q*x.p):""}</span></div>
   </article>`; }
 function xHtml(){ const gs=[...new Set(EXTRAS.map(x=>x.grp||"Articles"))];
-  return `<p class="lead">${PRO?"Prix hors taxes, TVA 20 % en plus. ":""}À l’unité, sans contrainte de carton.</p>`+gs.map(g=>`<div class="group"><h3>${esc(g)}</h3></div><div class="list">${EXTRAS.filter(x=>(x.grp||"Articles")===g).map(xRow).join("")}</div>`).join(""); }
+  return `<p class="lead">${PRO?"Prix HT, TVA 20 % en sus. ":"Prix TTC. "}À l’unité, sans contrainte de carton.</p>`+gs.map(g=>`<div class="group"><h3>${esc(g)}</h3></div><div class="list">${EXTRAS.filter(x=>(x.grp||"Articles")===g).map(xRow).join("")}</div>`).join(""); }
 function bieresHtml(){
   const f=S.tab;
   const tabs=TABS();
@@ -548,8 +556,8 @@ function bieresHtml(){
     body = `<p class="lead">Des coffrets prêts à offrir${ISCSE?", à prix CSE":""}. Pas de contrainte de carton.</p>
     <div class="list">${BOXES.map(b=>{const q=nOf(b.id);return `<article class="box${q?" has":""}">
       <img src="${IMG[b.img]}" alt="${esc(b.n)}">
-      <div class="info"><b>${b.n}</b><span class="price">${eur(b.p)}${b.old>b.p?` <span class="old">${eur(b.old)}</span>`:""}</span>${b.old>b.p?`<span class="save">${eur(b.old-b.p)} d’économie</span>`:""}</div>
-      <div class="stepper"><div class="row"><button class="sbtn" data-bdec="${b.id}" aria-label="Retirer un ${b.n}" ${q?"":"disabled"}>−</button><span class="qty" id="q-box-${b.id}">${q}</span><button class="sbtn plus" data-binc="${b.id}" aria-label="Ajouter un ${b.n}">+</button></div><span class="sub">${q?eur(q*b.p):""}</span></div>
+      <div class="info"><b>${b.n}</b><span class="price">${tx(b.p)}${b.old>b.p?` <span class="oldl">Prix boutique <s>${tx(b.old)}</s></span>`:""}</span>${b.old>b.p?`<span class="save">${tx(b.old-b.p)} d’économie</span>`:""}</div>
+      <div class="stepper"><div class="row"><button class="sbtn" data-bdec="${b.id}" aria-label="Retirer un ${b.n}" ${q?"":"disabled"}>−</button><span class="qty" id="q-box-${b.id}">${q}</span><button class="sbtn plus" data-binc="${b.id}" aria-label="Ajouter un ${b.n}">+</button></div><span class="sub">${q?tx(q*b.p):""}</span></div>
     </article>`;}).join("")}</div>
     ${boxCount()?`<div class="group"><h3>Vos coffrets</h3><span>${plural(boxCount(),"coffret")}</span></div>
     <p class="lead" style="margin-top:-8px">Pour chaque coffret, laissez-nous composer un assortiment ou choisissez vous-même les bières.</p>
@@ -557,7 +565,7 @@ function bieresHtml(){
   } else {
     const grp = g => BEERS.filter(b=>b.g===g);
     if(f==="soft") body = cartonHtml(f) + `<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, dans le même carton que les bières 33 cl</span></div><div class="list">${SOFTS().map(b=>beerRow(b,f)).join("")}</div>`;
-    else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${(BOUTIQUE[g]&&f!=="75"&&BOUTIQUE[g]>groupPrice(g,f))?`<s style="color:var(--muted);font-weight:400">${eur(BOUTIQUE[g])}</s> `:""}${eur(groupPrice(g,f))} la bouteille</span></div>
+    else body = cartonHtml(f) + ["classique","speciale"].filter(g=>grp(g).length).map(g=>`<div class="group"><h3>${g==="classique"?"Classiques":"Spéciales"}</h3><span>${(BOUTIQUE[g]&&f!=="75"&&BOUTIQUE[g]>groupPrice(g,f))?`<span style="color:var(--muted);font-weight:400">Prix boutique <s>${tx(BOUTIQUE[g])}</s> · </span>`:""}${tx(groupPrice(g,f))} la bouteille</span></div>
       <div class="list">${grp(g).map(b=>beerRow(b,f)).join("")}</div>`).join("")
       + (f==="33"&&F.soft&&SOFTS().length&&!TABS().some(x=>x[0]==="soft")?`<div class="group"><h3>Softs bio · La Softerie</h3><span>sans alcool, dans le même carton</span></div><div class="list">${SOFTS().map(b=>beerRow(b,"soft")).join("")}</div>`:"");
   }
@@ -596,7 +604,7 @@ function openCompose(i){ S.compose=i; const bg=$("#sheetBg"); bg.innerHTML=compo
 function refreshCompose(id){ const bg=$("#sheetBg"), sc=bg.querySelector(".sheet").scrollTop; bg.innerHTML=composeHtml(); bg.querySelector(".sheet").scrollTop=sc; if(id) bump("cq-"+id); }
 function closeCompose(){ S.compose=null; closeSheet(); render(); }
 function recapLines(f){
-  return BEERS.filter(b=>S.q[f][b.id]).map(b=>{const q=S.q[f][b.id];return `<div class="line" style="--c:${b.c}"><span class="dot"></span><span class="l">${q} × ${esc(b.n)} <small>${f==="75"?75:33} cl</small></span><span>${eur(q*price(b,f))}</span></div>`;}).join("");
+  return BEERS.filter(b=>S.q[f][b.id]).map(b=>{const q=S.q[f][b.id];return `<div class="line" style="--c:${b.c}"><span class="dot"></span><span class="l">${q} × ${esc(b.n)} <small>${f==="75"?75:33} cl</small></span><span>${tx(q*price(b,f))}</span></div>`;}).join("");
 }
 function recapHtml(){
   const p=S.person, n33=count("33"), n75=count("75"), nb=boxCount();
@@ -604,24 +612,34 @@ function recapHtml(){
   return `${demo}${topBar("recap")}<h2>Vérifiez votre commande</h2>
   <section class="card"><h3>Vous<button data-goto="vous">Modifier</button></h3>
     <dl class="who">${PRO?`<dt>Entreprise</dt><dd>${esc(p.rs)}<br><small>SIREN ${esc(p.siren)} · ${esc(p.rue)}, ${esc(p.cp)} ${esc(p.ville)}</small></dd>`:""}<dt>${PRO?"Contact":"Nom"}</dt><dd>${esc(p.prenom)} ${esc(p.nom)}</dd><dt>E-mail</dt><dd style="overflow-wrap:anywhere">${esc(p.email)}</dd>${p.service?`<dt>Service</dt><dd>${esc(p.service)}</dd>`:""}${p.tel?`<dt>Téléphone</dt><dd>${esc(p.tel)}</dd>`:""}<dt>Vente</dt><dd>${esc(CSE.nom)}</dd></dl></section>
-  ${n33?sec(`33 cl · ${plural(n33,"bouteille")}${count("soft")?"":" · "+plural(n33/CARTON["33"],"carton")}`,recapLines("33"),"33"):""}
+  ${PRO?proRecap():""}${PRO?"":`${n33?sec(`33 cl · ${plural(n33,"bouteille")}${count("soft")?"":" · "+plural(n33/CARTON["33"],"carton")}`,recapLines("33"),"33"):""}
   ${n75?sec(`75 cl · ${plural(n75/CARTON["75"],"carton")}`,recapLines("75"),"75"):""}
   ${count("soft")?sec(`Softs · ${plural(count("soft"),"bouteille")}`,recapLines("soft"),"soft"):""}
   ${count("soft")?`<p class="note" style="margin:-4px 2px 0">${plural((n33+count("soft"))/CARTON["33"],"carton")} de 33 cl, bières et softs mélangés.</p>`:""}
-  ${nb?sec(`Coffrets · ${nb}`,S.boxes.map((x,i)=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${esc(boxLabel(x,i))}<br><small>${x.mode==="assort"?"Assortiment de la brasserie":"Sur mesure : "+esc(pickText(x))}</small></span><span>${eur(BT(x.t).p)}</span></div>`).join(""),"box"):""}
-  ${xCount()?sec(`${xLabel()} · ${plural(xCount(),"article")}`,EXTRAS.filter(x=>S.x[x.id]).map(x=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${S.x[x.id]} × ${esc(x.n)}</span><span>${eur(S.x[x.id]*x.p)}${HT}</span></div>`).join(""),"x"):""}
-  ${PRO?`<div class="tot"><span>Total HT</span><span>${eur(total())}</span></div><div class="tot" style="font-size:15px;font-weight:500"><span>TVA 20 %</span><span>${eur(tvaOf())}</span></div><div class="tot"><span>Total TTC</span><span>${eur(total()+tvaOf())}</span></div>`:`<div class="tot"><span>Total</span><span>${eur(total())}</span></div>`}
-  ${nb?`<p class="note">Dont ${eur(boxSaving())} d’économie sur les coffrets.</p>`:""}
+  ${nb?sec(`Coffrets · ${nb}`,S.boxes.map((x,i)=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${esc(boxLabel(x,i))}<br><small>${x.mode==="assort"?"Assortiment de la brasserie":"Sur mesure : "+esc(pickText(x))}</small></span><span>${tx(BT(x.t).p)}</span></div>`).join(""),"box"):""}
+  ${xCount()?sec(`${xLabel()} · ${plural(xCount(),"article")}`,EXTRAS.filter(x=>S.x[x.id]).map(x=>`<div class="line" style="--c:var(--brand)"><span class="dot"></span><span class="l">${S.x[x.id]} × ${esc(x.n)}</span><span>${tx(S.x[x.id]*x.p)}</span></div>`).join(""),"x"):""}`}
+  ${PRO?"":`<div class="tot"><span>Total TTC</span><span>${eur(total())}</span></div>`}
+  ${nb?`<p class="note">Dont ${tx(boxSaving())} d’économie sur les coffrets.</p>`:""}
   <p class="note">${PRO?"Votre bon de commande vous est envoyé par e-mail. La facture vous sera envoyée par La Brasserie Stéphanoise ; paiement par virement à réception de la facture.":CSE.ha?"Règlement en ligne sur HelloAsso, juste après la validation.":`Règlement à la livraison, auprès de ${QUI}.`} ${CSE.retrait?"Retrait ou livraison : "+esc(CSE.retrait)+(CSE.lieu?", "+esc(CSE.lieu):"")+".":"Retrait ou livraison : date communiquée par "+QUI+"."}</p>
   ${CSE.creneau||CSE.paiement?`<p class="note">${CSE.creneau?"Créneau : "+esc(CSE.creneau)+". ":""}${CSE.paiement?"Paiement : "+esc(CSE.paiement)+".":""}</p>`:""}
   ${sendError?`<p class="err-box" role="alert">${esc(sendError)}</p>`:""}
   <p class="legal">L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p>`;
 }
+function proLines(){ const L=[];
+  ["33","75","soft"].forEach(f=>BEERS.filter(b=>S.q[f][b.id]).forEach(b=>L.push({n:b.n+" "+(f==="75"?75:33)+" cl",q:S.q[f][b.id],pu:price(b,f)})));
+  S.boxes.forEach((x,i)=>L.push({n:boxLabel(x,i)+(x.mode==="assort"?" (assortiment)":" (sur mesure : "+pickText(x)+")"),q:1,pu:BT(x.t).p}));
+  EXTRAS.filter(x=>S.x[x.id]).forEach(x=>L.push({n:x.n,q:S.x[x.id],pu:x.p}));
+  return L; }
+const n2 = v => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
+function proRecap(){ const L=proLines(), ht=total(), tva=tvaOf();
+  return `<section class="card"><h3>Votre commande<button data-goto="${(TABS()[0]||["x"])[0]}">Modifier</button></h3>
+  <table class="ptab"><thead><tr><th>Désignation</th><th>TVA (%)</th><th>Qté</th><th>P.U. HT</th><th>Total HT</th></tr></thead><tbody>${L.map(l=>`<tr><td>${esc(l.n)}</td><td>20,0</td><td>${l.q}</td><td>${n2(l.pu)}</td><td>${n2(l.q*l.pu)}</td></tr>`).join("")}</tbody></table>
+  <table class="ptot"><tr><td>TVA (20,0 %)</td><td>${eur(tva)}</td></tr><tr><td>Total HT</td><td>${eur(ht)}</td></tr><tr class="t"><td>Total TTC</td><td>${eur(ht+tva)}</td></tr></table></section>`; }
 function doneHtml(){
   return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${result?(result.nv||result.numero):""} enregistrée</span>
   <h1>Merci ${esc(S.person.prenom)} !</h1>
-  <p class="lead">${PRO?`Votre commande de ${eur(result?result.total:total())} HT (${eur(result&&result.ttc?result.ttc:total()+tvaOf())} TTC) est enregistrée. Votre bon de commande est envoyé à ${esc(S.person.email)}. La facture vous sera envoyée par La Brasserie Stéphanoise ; paiement par virement à réception.</p><p class="lead" style="display:none">`:""}Votre commande de ${eur(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. ${CSE.ha?"Il ne vous reste plus qu’à la régler en ligne.":`Vous la réglerez au moment de la livraison, auprès de ${QUI}.`}</p>
-  ${CSE.ha?`<button class="cta" data-hapay="${result?result.numero:""}">Payer ${eur(result?result.total:total())} sur HelloAsso</button><p class="note">Paiement sécurisé sur la page HelloAsso de l’organisateur.</p>`:""}
+  <p class="lead">${PRO?`Votre commande de ${eur(result?result.total:total())} HT (${eur(result&&result.ttc?result.ttc:total()+tvaOf())} TTC) est enregistrée. Votre bon de commande est envoyé à ${esc(S.person.email)}. La facture vous sera envoyée par La Brasserie Stéphanoise ; paiement par virement à réception.</p><p class="lead" style="display:none">`:""}Votre commande de ${tx(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. ${CSE.ha?"Il ne vous reste plus qu’à la régler en ligne.":`Vous la réglerez au moment de la livraison, auprès de ${QUI}.`}</p>
+  ${CSE.ha?`<button class="cta" data-hapay="${result?result.numero:""}">Payer ${tx(result?result.total:total())} sur HelloAsso</button><p class="note">Paiement sécurisé sur la page HelloAsso de l’organisateur.</p>`:""}
   <p class="note">Un oubli ou une erreur ? Répondez simplement à l’e-mail de confirmation.</p>
   <button class="cta" data-restart>Passer une autre commande</button></section>`;
 }
@@ -649,22 +667,23 @@ function renderBar(){
     const bl=blockers(), todo=boxTodo(), empty=total()===0;
     const why = empty?(EXTRAS.length&&!CATB().length?"Ajoutez au moins un article":"Ajoutez au moins une bière ou un coffret"):bl.length?bl.map(f=>`Encore ${plural(missing(f),"bouteille")} en ${flab(f)}`).join(" · "):todo.length?`${plural(todo.length,"coffret")} sur mesure à compléter`:[count("33")+count("75")+count("soft")?plural(count("33")+count("75")+count("soft"),"bouteille"):"",boxCount()?plural(boxCount(),"coffret"):"",xCount()?plural(xCount(),"article"):""].filter(Boolean).join(" · ");
     bar.hidden=false;
-    inn.innerHTML=`<div class="sum"><b>${eur(total())}${HT}</b><small class="${empty||bl.length||todo.length?"why":""}">${why}</small></div><button class="cta" data-go="recap" ${empty||bl.length||todo.length?"disabled":""}>Récapitulatif</button>`;
+    inn.innerHTML=`<div class="sum"><b>${tx(total())}</b><small class="${empty||bl.length||todo.length?"why":""}">${why}</small></div><button class="cta" data-go="recap" ${empty||bl.length||todo.length?"disabled":""}>Récapitulatif</button>`;
     return;
   }
-  if(S.screen==="recap"){ bar.hidden=false; inn.innerHTML=`<button class="ghost" data-go="bieres" ${sending?"disabled":""}>Retour</button><div class="sum"><b>${eur(total())}${HT}</b></div><button class="cta" data-submit ${sending?"disabled":""}>${sending?"Envoi…":"Valider ma commande"}</button>`; return; }
+  if(S.screen==="recap"){ bar.hidden=false; const lab=PRO?`Valider ma commande – ${eur(total())} HT (${eur(total()+tvaOf())} TTC)`:`Valider ma commande – ${eur(total())} TTC`; inn.innerHTML=`<button class="ghost" data-go="bieres" ${sending?"disabled":""}>Retour</button><button class="cta" style="flex:1;white-space:normal;font-size:16px;line-height:1.25;padding:12px 14px" data-submit ${sending?"disabled":""}>${sending?"Envoi en cours…":lab}</button>`; return; }
   bar.hidden=true;
 }
 
 let sending=false, result=null, sendError="";
+function sendOv(on){ let o=document.getElementById("sendOv"); if(!on){ if(o) o.remove(); return; } if(o) return; o=document.createElement("div"); o.id="sendOv"; o.className="sendov"; o.setAttribute("role","alertdialog"); o.setAttribute("aria-live","assertive"); o.innerHTML=`<div><i aria-hidden="true"></i><b>Commande en cours d’envoi, ne fermez pas la page…</b><span class="note">Cela peut prendre une dizaine de secondes.</span></div>`; document.body.appendChild(o); }
 function submit(){
   if(sending) return;
-  sending=true; sendError=""; renderBar();
+  sending=true; sendError=""; sendOv(true); renderBar();
   const payload={cse:CSE.code, person:S.person, q:S.q, x:S.x, boxes:S.boxes};
-  const fail=msg=>{ sending=false; sendError=msg||"La commande n’a pas pu être envoyée. Vérifiez votre connexion et réessayez."; renderBar(); render(); };
+  const fail=msg=>{ sending=false; sendOv(false); sendError=msg||"La commande n’a pas pu être envoyée. Vérifiez votre connexion et réessayez."; renderBar(); render(); };
   fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
     .then(r=>r.json())
-    .then(r=>{ if(r&&r.ok){ sending=false; result=r; go("done"); } else fail(r&&r.error); })
+    .then(r=>{ if(r&&r.ok){ sending=false; sendOv(false); result=r; go("done"); } else fail(r&&r.error); })
     .catch(()=>fail());
 }
 function go(screen){ S.screen=screen; render(); window.scrollTo({top:0}); }
@@ -676,7 +695,7 @@ function openSheet(id){
   bg.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(b.n)}" style="--c:${b.c}">
     <div class="head"><div class="plate">${plateImg(b,"Étiquette "+esc(b.n))}</div>
     <div><h2 style="color:var(--c)">${esc(b.n)}</h2>${pastille(b,true)?`<p style="margin:2px 0">${pastille(b,true)}</p>`:""}<p class="meta">${esc(b.s)} · ${b.d}</p><p class="dev">${b.dev}</p>
-    <p class="meta">${b.g==="soft"||!F.b75?"33 cl "+eur(price(b,"33")):(F.b33?"33 cl "+eur(price(b,"33"))+" · ":"")+"75 cl "+eur(price(b,"75"))}</p></div></div>
+    <p class="meta">${b.g==="soft"||!F.b75?"33 cl "+tx(price(b,"33")):(F.b33?"33 cl "+tx(price(b,"33"))+" · ":"")+"75 cl "+tx(price(b,"75"))}</p></div></div>
     <p>${b.desc}</p>${b.med.length?`<ul>${b.med.map(m=>`<li>${m}</li>`).join("")}</ul>`:""}
     <button class="cta" data-close>Fermer</button></div>`;
   bg.hidden=false; bg.querySelector("[data-close]").focus();
