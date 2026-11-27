@@ -67,6 +67,8 @@ h2{font-size:21px;margin:0;font-weight:700;text-wrap:balance}
 .how p{margin:0}.how small{color:var(--muted);display:block}
 .closed{background:var(--warn-bg);color:var(--warn);font-weight:700;border-radius:12px;padding:12px 14px;margin:0}
 .err-box{background:var(--warn-bg);color:var(--warn);font-weight:700;border-radius:12px;padding:12px 14px;margin:0}
+.cta.alt{background:var(--surface);color:var(--ink);border:2px solid var(--line)}
+.cta.big{font-size:19px;min-height:60px}
 .legal{font-size:11.5px;color:var(--muted);text-align:center;margin:0}
 /* Formulaire */
 .field{display:flex;flex-direction:column;gap:5px}
@@ -288,6 +290,12 @@ td.n,th.n{text-align:right;white-space:nowrap}
 .dlg .yes{background:var(--warn);border:1px solid var(--warn);color:#fff}
 .dlg .yes:disabled{opacity:.6;cursor:wait}
 .toast{background:var(--brand);color:#fff;border-radius:10px;padding:10px 12px;margin:0;font-weight:700}
+tr.na td{background:var(--warn-bg)}
+.pst{font-size:12.5px;font-weight:700}
+.pst.na{color:var(--warn)}
+.pst.ok{color:var(--brand)}
+.pst.att{color:var(--muted)}
+.lk{color:var(--brand);margin-right:4px}
 </style>
 </head>
 <body>
@@ -636,6 +644,15 @@ function proRecap(){ const L=proLines(), ht=total(), tva=tvaOf();
   <table class="ptab"><thead><tr><th>Désignation</th><th>TVA (%)</th><th>Qté</th><th>P.U. HT</th><th>Total HT</th></tr></thead><tbody>${L.map(l=>`<tr><td>${esc(l.n)}</td><td>20,0</td><td>${l.q}</td><td>${n2(l.pu)}</td><td>${n2(l.q*l.pu)}</td></tr>`).join("")}</tbody></table>
   <table class="ptot"><tr><td>TVA (20,0 %)</td><td>${eur(tva)}</td></tr><tr><td>Total HT</td><td>${eur(ht)}</td></tr><tr class="t"><td>Total TTC</td><td>${eur(ht+tva)}</td></tr></table></section>`; }
 function doneHtml(){
+  if(CSE.ha&&!PRO&&result){ const nv=result.nv||result.numero;
+    return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${esc(nv)} enregistrée</span>
+    <h1>Dernière étape : le paiement</h1>
+    <p class="lead">Votre commande de ${tx(result.total)} est enregistrée, en attente de paiement. Un récapitulatif vous est envoyé à ${esc(S.person.email)}.</p>
+    ${result.haErr?`<p class="err-box" role="alert">${esc(result.haErr)}</p>`:result.haUrl?`<p class="note" role="status">Ouverture de la page de paiement HelloAsso…</p>`:""}
+    <button class="cta big" data-hapay="${esc(result.numero)}">Payer ${tx(result.total)} sur HelloAsso</button>
+    <p class="note">Paiement sécurisé sur la page HelloAsso de l’organisateur. Tant qu’elle n’est pas réglée, votre commande n’est pas préparée.</p>
+    <p class="note">Un oubli ou une erreur ? Répondez simplement à l’e-mail de confirmation.</p>
+    <button class="ghost" data-restart>Passer une autre commande</button></section>`; }
   return `${demo}${topBar()}<section class="done"><span class="stamp">Commande n°${result?(result.nv||result.numero):""} enregistrée</span>
   <h1>Merci ${esc(S.person.prenom)} !</h1>
   <p class="lead">${PRO?`Votre commande de ${eur(result?result.total:total())} HT (${eur(result&&result.ttc?result.ttc:total()+tvaOf())} TTC) est enregistrée. Votre bon de commande est envoyé à ${esc(S.person.email)}. La facture vous sera envoyée par La Brasserie Stéphanoise ; paiement par virement à réception.</p><p class="lead" style="display:none">`:""}Votre commande de ${tx(result?result.total:total())} est enregistrée. Un récapitulatif vous est envoyé à ${esc(S.person.email)}. ${CSE.ha?"Il ne vous reste plus qu’à la régler en ligne.":`Vous la réglerez au moment de la livraison, auprès de ${QUI}.`}</p>
@@ -645,9 +662,20 @@ function doneHtml(){
 }
 
 /* Paiement HelloAsso */
+function dupShow(dp){ const bar=$("#bar"); if(bar) bar.hidden=true; const nv=esc(String(dp.nv||dp.n));
+  $("#app").innerHTML=`${topBar()}<section class="done"><span class="stamp">Commande n°${nv} non payée</span>
+  <h1>Vous avez déjà une commande en attente</h1>
+  <p class="lead">Vous avez déjà passé la commande n° ${nv} le ${esc(dp.date)}, de ${tx(dp.total)}, et elle n’est pas payée${dp.na?" (paiement non abouti)":""}.</p>
+  <button class="cta big" data-duppay="${esc(dp.n)}" data-t="${esc(dp.pt||"")}">La payer maintenant</button>
+  <button class="cta alt" data-duprep="${esc(dp.n)}">La remplacer par celle-ci (${tx(total())})</button>
+  <p class="note">« La remplacer » annule la commande n° ${nv} et enregistre celle que vous venez de composer.</p>
+  <button class="ghost" data-go="recap">Revenir à ma commande</button></section>`; window.scrollTo({top:0}); }
+function haLink(){ const n=Q.get("payer"), bar=$("#bar"); if(bar) bar.hidden=true;
+  $("#app").innerHTML=`${topBar()}<section class="done"><h1>Ouverture du paiement…</h1><p class="lead">Vous allez être redirigé vers la page HelloAsso de l’organisateur.</p></section>`;
+  haPost({action:"haPay",n,t:Q.get("t")||"",page:location.origin+location.pathname}).then(r=>{ if(r.ok&&r.url) location.href=r.url; else if(r.ok&&r.paid) haShow(n,true,"",r.nv); else haShow(n,false,r.error,r.nv); }).catch(()=>haShow(n,false,"Connexion impossible pour le moment. Réessayez dans quelques instants.")); }
 function haPost(o){ return fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({cse:Q.get("cse")},o))}).then(r=>r.json()); }
-function haGo(n){ const b=document.querySelector("[data-hapay]"); if(b){ b.disabled=true; b.textContent="Redirection vers HelloAsso…"; }
-  haPost({action:"haPay",n,page:location.origin+location.pathname}).then(r=>{ if(r.ok&&r.url) location.href=r.url; else if(r.ok&&r.paid) haShow(n,true,"",r.nv); else haShow(n,false,r.error,r.nv); }).catch(()=>haShow(n,false,"Connexion impossible pour le moment. Réessayez dans quelques instants.")); }
+function haGo(n,t){ const b=document.querySelector("[data-hapay]"); if(b){ b.disabled=true; b.textContent="Redirection vers HelloAsso…"; }
+  haPost({action:"haPay",n,t:t||(result&&String(result.numero)===String(n)&&result.pt)||Q.get("t")||"",page:location.origin+location.pathname}).then(r=>{ if(r.ok&&r.url) location.href=r.url; else if(r.ok&&r.paid) haShow(n,true,"",r.nv); else haShow(n,false,r.error,r.nv); }).catch(()=>haShow(n,false,"Connexion impossible pour le moment. Réessayez dans quelques instants.")); }
 function haShow(n,paid,msg,nv){ const bar=$("#bar"); if(bar) bar.hidden=true; const nn=esc(String(n||"")), nd=esc(String(nv||n||""));
   $("#app").innerHTML=`${topBar()}<section class="done"><span class="stamp">Commande n°${nd}</span>
   <h1>${paid?"Paiement reçu, merci !":"Paiement non finalisé"}</h1>
@@ -676,14 +704,17 @@ function renderBar(){
 
 let sending=false, result=null, sendError="";
 function sendOv(on){ let o=document.getElementById("sendOv"); if(!on){ if(o) o.remove(); return; } if(o) return; o=document.createElement("div"); o.id="sendOv"; o.className="sendov"; o.setAttribute("role","alertdialog"); o.setAttribute("aria-live","assertive"); o.innerHTML=`<div><i aria-hidden="true"></i><b>Commande en cours d’envoi, ne fermez pas la page…</b><span class="note">Cela peut prendre une dizaine de secondes.</span></div>`; document.body.appendChild(o); }
-function submit(){
+function submit(remplacer){
   if(sending) return;
   sending=true; sendError=""; sendOv(true); renderBar();
-  const payload={cse:CSE.code, person:S.person, q:S.q, x:S.x, boxes:S.boxes};
+  const payload={cse:CSE.code, person:S.person, q:S.q, x:S.x, boxes:S.boxes, page:location.origin+location.pathname};
+  if(remplacer) payload.remplacer=remplacer;
   const fail=msg=>{ sending=false; sendOv(false); sendError=msg||"La commande n’a pas pu être envoyée. Vérifiez votre connexion et réessayez."; renderBar(); render(); };
   fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
     .then(r=>r.json())
-    .then(r=>{ if(r&&r.ok){ sending=false; sendOv(false); result=r; go("done"); } else fail(r&&r.error); })
+    .then(r=>{ if(r&&r.ok){ sending=false; sendOv(false); result=r; go("done"); if(r.haUrl) setTimeout(()=>{ location.href=r.haUrl; },700); }
+      else if(r&&r.doublon){ sending=false; sendOv(false); renderBar(); dupShow(r.doublon); }
+      else fail(r&&r.error); })
     .catch(()=>fail());
 }
 function go(screen){ S.screen=screen; render(); window.scrollTo({top:0}); }
@@ -747,6 +778,8 @@ document.addEventListener("click",e=>{
   }
   if(d.submit!==undefined){ submit(); return; }
   if(d.hapay!==undefined){ haGo(d.hapay||(result&&result.numero)); return; }
+  if(d.duppay!==undefined){ haGo(d.duppay,d.t); return; }
+  if(d.duprep!==undefined){ t.disabled=true; t.textContent="Envoi en cours…"; submit(Number(d.duprep)); return; }
   if(d.restart!==undefined){ result=null; S.q={"33":{},"75":{},"soft":{}}; S.boxes=[]; S.x={}; S.compose=null; S.person={nom:"",prenom:"",service:"",tel:"",email:"",news:false,rs:"",siren:"",rue:"",cp:"",ville:""}; S.tab=(TABS()[0]||["33"])[0]; go("home"); return; }
 });
 document.addEventListener("keydown",e=>{
@@ -772,7 +805,10 @@ const CARTON = Object.assign({"33":12,"75":6,"soft":12}, D.carton||{}, PX.carton
 const eur = v => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 const esc = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const t33 = D.beers.reduce((a,b)=>a+b.q33,0), t75 = D.beers.reduce((a,b)=>a+b.q75,0), tb = D.boxes.reduce((a,b)=>a+b.q,0);
-const total = D.orders.reduce((a,o)=>a+o.montant,0);
+const ACT = D.orders.filter(o=>o.pst!=="na"), NNA = D.orders.length-ACT.length, HA = !!(D.ha&&D.ha.on);
+const total = ACT.reduce((a,o)=>a+o.montant,0);
+const pstS = o => !HA&&!o.pst ? "" : o.paye ? `<br><span class="pst ok">Payé</span>` : o.pst==="na" ? `<br><span class="pst na">Paiement non abouti : hors préparation et hors totaux tant que « Payé » n’est pas coché</span>` : o.pst==="att" ? `<br><span class="pst att">En attente de paiement depuis le ${esc(o.date)}</span>` : `<br><span class="pst att">Non payée</span>`;
+const lienB = o => HA&&!o.paye ? `<br><button type="button" class="del lk" data-halien="${esc(o.n)}" data-env="1" data-mail="${esc(o.email)}">Envoyer le lien de paiement</button><button type="button" class="del lk" data-halien="${esc(o.n)}">Copier le lien</button>${o.lien?`<br><span class="det">Lien envoyé le ${esc(o.lien)}</span>`:""}` : "";
 const color = c => /^#2[0-3]1[ef]2[0-1]$/i.test(c) ? "var(--ink)" : c;
 document.getElementById("app").className="";
 document.getElementById("app").innerHTML = `<main>
@@ -782,7 +818,7 @@ document.getElementById("app").innerHTML = `<main>
   ${D.cse.retrait?" · Retrait / livraison : "+esc(D.cse.retrait)+(D.cse.lieu?", "+esc(D.cse.lieu):""):""}</p>
   <p class="meta">Mis à jour le ${D.maj}. Rechargez la page pour actualiser.</p></div>
   <div class="kpis">
-    <div class="kpi"><b>${D.orders.length}</b><span>commande${D.orders.length>1?"s":""}</span></div>
+    <div class="kpi"><b>${ACT.length}</b><span>commande${ACT.length>1?"s":""}${NNA?` · ${NNA} non abouti${NNA>1?"es":"e"} (hors totaux)`:""}</span></div>
     <div class="kpi"><b>${eur(total)}</b><span>montant total</span></div>
     <div class="kpi"><b>${t33}</b><span>bouteilles 33 cl · ${(t33/CARTON["33"]).toLocaleString("fr-FR")} carton${t33/CARTON["33"]>1?"s":""}</span></div>
     <div class="kpi"><b>${t75}</b><span>bouteilles 75 cl · ${(t75/CARTON["75"]).toLocaleString("fr-FR")} carton${t75/CARTON["75"]>1?"s":""}</span></div>
@@ -796,7 +832,7 @@ document.getElementById("app").innerHTML = `<main>
   <section class="card"><h2>Commandes de vos collègues</h2>
   ${D.cse.ouvert&&D.orders.length?`<p class="meta">Une commande en double ou passée par erreur ? Vous pouvez la supprimer jusqu’à la date limite.</p>`:""}
   ${D.orders.length?`<div class="scroll"><table><thead><tr><th>Nom</th><th>Détail</th><th class="n">Montant</th></tr></thead><tbody>
-    ${D.orders.map(o=>`<tr><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><br><span class="det">${esc(o.service)}${o.service&&o.date?" · ":""}${esc(o.date)}</span></td><td class="det">${esc(o.detail)}</td><td class="n">${eur(o.montant)}${D.cse.ouvert?`<br><button type="button" class="del" data-del="${esc(o.n)}">Supprimer</button>`:""}</td></tr>`).join("")}
+    ${D.orders.map(o=>`<tr class="${o.pst==="na"&&!o.paye?"na":""}"><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><br><span class="det">${esc(o.service)}${o.service&&o.date?" · ":""}${esc(o.date)}</span>${pstS(o)}${lienB(o)}</td><td class="det">${esc(o.detail)}</td><td class="n">${eur(o.montant)}${D.cse.ouvert?`<br><button type="button" class="del" data-del="${esc(o.n)}">Supprimer</button>`:""}</td></tr>`).join("")}
   </tbody></table></div>`:`<p class="meta">Aucune commande pour l’instant. Les commandes apparaîtront ici dès qu’un collègue aura validé la sienne.</p>`}
   </section>
   <p class="legal">Page réservée au responsable de la commande. Merci de ne pas la diffuser.<br>La Brasserie Stéphanoise · L’abus d’alcool est dangereux pour la santé, à consommer avec modération.</p></main>`;
@@ -835,6 +871,16 @@ function suiviExtras(D){
   const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   const livMin=lim=>{ if(!lim) return ""; const d=new Date(lim+"T12:00"); let n=0; while(n<4){ d.setDate(d.getDate()+1); const w=d.getDay(); if(w!==0&&w!==6&&!(C.feries||[]).includes(iso(d))) n++; } return iso(d); };
   const post=(op,extra)=>fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({action:"orga",op,cse:Q.get("cse"),cle:Q.get("cle")},extra||{}))}).then(r=>r.json());
+  document.querySelectorAll("[data-halien]").forEach(b=>b.onclick=async()=>{ const env=b.dataset.env==="1";
+    if(env&&b.dataset.c!=="1"){ b.dataset.c="1"; b.textContent="Confirmer l’envoi à "+(b.dataset.mail||"l’acheteur"); return; }
+    b.disabled=true; const t0=b.textContent; b.textContent=env?"Envoi…":"Préparation…";
+    const r=await post("haLien",{n:Number(b.dataset.halien),envoyer:env}).catch(()=>null);
+    if(!(r&&r.ok)){ b.disabled=false; b.dataset.c=""; b.textContent=t0; alertBox((r&&r.error)||"Connexion impossible. Réessayez."); return; }
+    if(env){ b.textContent="Lien envoyé à "+r.envoye; return; }
+    b.disabled=false; b.textContent="Copier le lien";
+    const ok=await (navigator.clipboard?navigator.clipboard.writeText(r.url).then(()=>true,()=>false):Promise.resolve(false));
+    const s=document.createElement("span"); s.className="det"; s.style.overflowWrap="anywhere"; s.innerHTML=(ok?"Lien copié : ":"Lien : ")+esc(r.url); b.after(document.createElement("br"),s); });
+  const alertBox=m=>{ const p=document.createElement("p"); p.className="warn"; p.setAttribute("role","alert"); p.textContent=m; const k=main.querySelector(".kpis"); (k||main.firstElementChild).after(p); setTimeout(()=>p.remove(),6000); };
   const status = C.livraisonIso ? (C.dateOk?`<p class="st ok">Livraison confirmée par la brasserie : ${fr(C.livraisonIso)}.</p>`:`<p class="st wait">Livraison demandée le ${fr(C.livraisonIso)} : en attente de confirmation par la brasserie.</p>`) : `<p class="st wait">Aucune date de livraison choisie pour l’instant.</p>`;
   const prixHtml = C.resale && D.prix && D.prix.length ? `<div class="full"><h2 style="margin:8px 0">Vos prix de vente</h2><p class="meta">Le prix payé par vos acheteurs. Il ne peut pas être inférieur au prix brasserie.</p><div class="scroll"><table><thead><tr><th>Produit</th><th class="n">Prix brasserie</th><th class="n">Votre prix</th></tr></thead><tbody>${D.prix.map((p,i)=>`<tr><td>${esc(p.n)}</td><td class="n">${eur(p.b)}</td><td class="n"><input class="pv" data-i="${i}" inputmode="decimal" value="${Number(p.v).toFixed(2).replace(".",",")}" style="width:84px;text-align:right;font:inherit;border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--bg);color:var(--ink)"></td></tr>`).join("")}</tbody></table></div></div>`:"";
   const sec=document.createElement("section"); sec.className="card";
@@ -882,6 +928,7 @@ function suiviExtras(D){
      <label>Client Secret<input id="ha-secret" type="password" autocomplete="new-password" placeholder="${h.hasKey?"Enregistré : laisser vide pour garder":"À coller ici"}"></label>
     </div>
     <p class="meta">Votre clé se trouve dans votre espace HelloAsso : <b>Mon Compte › Intégration et API</b>.</p>
+    ${h.on?`<p class="meta">Les paiements sont vérifiés toutes les 15 minutes. Facultatif, pour un « payé » immédiat : dans HelloAsso, <b>Mon Compte › Intégration et API › Notifications</b>, collez l’adresse <code style="overflow-wrap:anywhere">${esc(API)}</code>.</p>`:""}
     <p class="warn" id="ha-err" hidden></p>
     <div class="btns"><button class="btn main" id="ha-save">Enregistrer et tester</button></div>`;
     sec.after(hs);
@@ -896,14 +943,14 @@ function suiviExtras(D){
   const dist=document.createElement("section"); dist.className="card";
   dist.innerHTML=`<h2>Distribution</h2><p class="meta">Cochez au fur et à mesure : c’est enregistré tout de suite.</p>
     <div class="scroll"><table><thead><tr><th>Nom</th><th class="n">Montant</th><th class="n">Payé</th><th class="n">Remis</th></tr></thead><tbody>
-    ${D.orders.map(o=>`<tr><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><br><span class="det">${esc(o.detail)}</span></td><td class="n">${eur(o.montant)}</td>
+    ${D.orders.map(o=>`<tr class="${o.pst==="na"&&!o.paye?"na":""}"><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><br><span class="det">${esc(o.detail)}</span>${o.pst==="na"&&!o.paye?`<br><b class="det" style="color:var(--warn)">Paiement non abouti : à ne pas remettre tant que « Payé » n’est pas coché</b>`:""}</td><td class="n">${eur(o.montant)}</td>
       <td class="n"><input type="checkbox" class="chk" data-n="${esc(o.n)}" data-champ="paye" ${o.paye?"checked":""} aria-label="Payé : ${esc(o.prenom)} ${esc(o.nom)}"></td>
       <td class="n"><input type="checkbox" class="chk" data-n="${esc(o.n)}" data-champ="remis" ${o.remis?"checked":""} aria-label="Remis : ${esc(o.prenom)} ${esc(o.nom)}"></td></tr>`).join("")}</tbody></table></div>
     <p class="meta" id="dist-sum"></p><p class="warn" id="dist-err" hidden></p>
     <div class="btns"><button class="btn" id="dist-csv">Télécharger la liste (Excel)</button></div>`;
   haAnchor.after(dist);
   const derr=dist.querySelector("#dist-err");
-  const sum=()=>{ const p=D.orders.filter(o=>o.paye), r=D.orders.filter(o=>o.remis); dist.querySelector("#dist-sum").textContent=`${p.length}/${D.orders.length} payées (${eur(p.reduce((a,o)=>a+o.montant,0))}) · ${r.length}/${D.orders.length} remises`; }; sum();
+  const sum=()=>{ const A=D.orders.filter(o=>o.pst!=="na"||o.paye), p=A.filter(o=>o.paye), r=A.filter(o=>o.remis), x=D.orders.length-A.length; dist.querySelector("#dist-sum").textContent=`${p.length}/${A.length} payées (${eur(p.reduce((a,o)=>a+o.montant,0))}) · ${r.length}/${A.length} remises${x?` · ${x} non abouti${x>1?"es":"e"} hors liste`:""}`; }; sum();
   dist.querySelectorAll(".chk").forEach(c=>c.onchange=async()=>{ const o=D.orders.find(x=>String(x.n)===c.dataset.n); o[c.dataset.champ]=c.checked; sum(); derr.hidden=true;
     const r=await post("pointer",{n:o.n,champ:c.dataset.champ,valeur:c.checked}).catch(()=>null);
     if(!(r&&r.ok)){ c.checked=!c.checked; o[c.dataset.champ]=c.checked; sum(); derr.textContent="Connexion impossible : la case n’a pas été enregistrée."; derr.hidden=false; } });
@@ -936,12 +983,12 @@ if (Q.get("desinscription")) {
   let pc=null;
   try{ const x=JSON.parse(localStorage.getItem(PK)||"null"); if(x&&x.s&&Date.now()-x.t<7*864e5) pc=x; }catch(e){}
   const keepP=d=>{ try{ localStorage.setItem(PK,JSON.stringify({t:Date.now(),s:JSON.stringify(d)})); }catch(e){} };
-  if(pc && !window.__PRE && !Q.has("ha")){
+  if(pc && !window.__PRE && !Q.has("ha") && !Q.has("payer")){
     startOrder(JSON.parse(pc.s));
     api({api:"page", cse:Q.get("cse")}).then(r=>{ if(!r.ok){ try{ localStorage.removeItem(PK); }catch(e){} location.reload(); return; }
       const s1=JSON.stringify(r.data); if(s1===pc.s){ keepP(r.data); return; } keepP(r.data);
       if(window.__vgIdle && window.__vgIdle()) location.reload(); }).catch(()=>{});
-  } else (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"page", cse:Q.get("cse")})).then(r=> r.ok ? (keepP(r.data), startOrder(r.data), Q.has("ha")&&haReturn()) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
+  } else (window.__PRE ? Promise.resolve(window.__PRE) : api({api:"page", cse:Q.get("cse")})).then(r=> r.ok ? (keepP(r.data), startOrder(r.data), Q.has("ha")?haReturn():Q.has("payer")&&haLink()) : showMessage(r.titre||"Erreur", r.error)).catch(OFFLINE);
 }
 </script>
 </body></html>

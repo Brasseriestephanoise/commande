@@ -73,6 +73,8 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr:last-child td{border-bottom:0}
 tbody tr.row{cursor:pointer}
 tbody tr.row:hover td{background:var(--bg)}
+tbody tr.na td,tbody tr.na:hover td{background:var(--warn-soft)}
+.pill.na{background:var(--warn);color:#fff}
 tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:0}
 .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
 .pill.open{background:var(--accent-soft);color:var(--accent)}
@@ -141,6 +143,7 @@ body.loading::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z
     <button type="button" data-nav="catalogue">Catalogue</button>
     <button type="button" data-nav="facturer" id="navFact" hidden>À facturer</button>
     <button type="button" data-nav="contacts" id="navContacts" hidden>Contacts</button>
+    <button type="button" data-nav="paiements" id="navPay" hidden>Paiements</button>
     <button type="button" data-nav="acces" id="navAcces" hidden>Accès</button>
   </nav>
   <div id="who" class="sub" style="width:100%;text-align:right"></div>
@@ -175,7 +178,7 @@ const sfx4 = () => { const c="abcdefghjkmnpqrstuvwxyz23456789"; let r=""; for(le
 const codeVente = (nom,o) => { const b=slug(nom).slice(0,34).replace(/-+$/,""); if(!b) return ""; o.sfx=o.sfx||sfx4(); return b+"-"+o.sfx; };
 const slug = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 function toast(t){ const h=$("#toastHost"); h.innerHTML=`<div class="toast" role="status">${esc(t)}</div>`; clearTimeout(toast.t); toast.t=setTimeout(()=>h.innerHTML="",3000); }
-function copy(t){ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Lien copié")).catch(()=>toast("Copie impossible : sélectionne le lien à la main")); }
+function copy(t){ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast(/^https?:/.test(t)?"Lien copié":"Copié")).catch(()=>toast("Copie impossible : sélectionne le lien à la main")); }
 
 async function api(op, data){
   if (!IDT || IDT_EXP < Date.now() / 1000 + 60) { needLogin("Ta session a expiré : reconnecte-toi."); throw new Error("Session expirée"); }
@@ -267,18 +270,34 @@ function vVentes(){
 }
 function gName(v){ if(!v.configured||v.grille==="cse") return "CSE classique"; const g=D.grilles.find(x=>x.id===v.grille); return g?g.nom:(v.grille?"Grille supprimée":"Personnalisée"); }
 
+function pstTag(o){ const C=S.cur; if(!(C.ha&&C.ha.on)&&!o.pst) return ""; return o.pst==="ok"?`<span class="pill open">Payé</span>`:o.pst==="na"?`<span class="pill na">Paiement non abouti</span>`:o.pst==="att"?`<span class="pill soon">En attente de paiement</span>`:`<span class="pill closed">Non payée</span>`; }
+function cmdHtml(C, cf){ const nc=cf.resale?7:6, ha=!!(C.ha&&C.ha.on), A=C.all||C.orders, nna=A.length-C.orders.length;
+  const det=o=>{ const tel=String(o.tel||"").replace(/^'/,"");
+    const co=C.coord?`<div><div class="sub">E-mail</div>${o.email?esc(o.email)+` <button class="btn small" type="button" data-copy="${esc(o.email)}">Copier</button>`:"–"}</div><div><div class="sub">Téléphone</div>${tel?esc(tel)+` <button class="btn small" type="button" data-copy="${esc(tel)}">Copier</button>`:"–"}</div>`:`<div class="muted">Coordonnées réservées aux accès Admin et Gestion.</div>`;
+    const pay=ha&&C.coord&&o.pst!=="ok"?`<div class="bar"><button class="btn small primary" type="button" data-halien="${o.n}" data-env="1">Envoyer le lien de paiement</button><button class="btn small" type="button" data-halien="${o.n}">Copier le lien</button>${o.lien?`<span class="note">Lien envoyé le ${esc(o.lien)}</span>`:""}</div>${S.lien&&S.lien.n==o.n?`<p class="note" style="overflow-wrap:anywhere">Lien de paiement : <code>${esc(S.lien.url)}</code></p>`:""}`:"";
+    return `<tr class="odet${o.pst==="na"?" na":""}"><td></td><td colspan="${nc-1}"><div class="grid2">${co}</div>${o.pst==="na"?`<p class="note">Commande gardée mais sortie de la préparation, des totaux, de la liste de distribution et du stock réservé. Elle revient si l’organisateur coche « Payé ».</p>`:""}${pay}</td></tr>`; };
+  return `<section class="card">${nna?`<p class="note" style="margin-top:0"><span class="pill na">${nna} paiement${nna>1?"s":""} non abouti${nna>1?"s":""}</span> hors totaux, préparation, distribution et stock réservé.</p>`:""}<p class="note" style="margin-top:0">Clique sur une commande pour voir les coordonnées de l’acheteur${ha?" et le lien de paiement":""}.</p><div class="scroll"><table><thead><tr><th class="num">N°</th><th>Nom</th><th>Service</th><th>Détail</th><th class="num">${cf.resale?"Payé par l’acheteur":"Montant"}</th>${cf.resale?'<th class="num">Prix brasserie</th>':""}</tr></thead>
+    <tbody>${A.map(o=>`<tr class="row${o.pst==="na"?" na":""}" data-ord="${o.n}" aria-expanded="${S.ord==o.n}"><td class="num">${o.n}</td><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><div class="sub">${esc(o.date)}</div>${pstTag(o)}</td><td class="muted">${esc(o.service)}</td><td class="sub">${detail(o)}</td><td class="num">${eur(o.montant)}</td>${cf.resale?`<td class="num">${eur(o.montantB==null?o.montant:o.montantB)}</td>`:""}</tr>${S.ord==o.n?det(o):""}`).join("") || `<tr><td colspan="6" class="muted">Aucune commande pour l’instant.</td></tr>`}</tbody></table></div></section>`; }
+function vPaiements(){ const h=S.hal; if(!h) return `<h1>Paiements HelloAsso</h1><p class="muted">Chargement…</p>`;
+  const v=h.verif, L=h.log||[], dt=t=>new Date(t).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+  return `<div class="head"><div><h1>Paiements HelloAsso</h1><p class="muted">Vérification automatique toutes les 15 min : « Payé » coché tout seul, « Paiement non abouti » après 1 h sans paiement.</p></div><div class="bar"><button class="btn" type="button" data-haverif>Vérifier maintenant</button></div></div>
+  <section class="card"><h2>Dernière vérification</h2><p style="margin:0">${v?dt(v.t)+" · "+v.chk+" commande(s) vérifiée(s) auprès de HelloAsso · "+v.paid+" payée(s) · "+v.na+" passée(s) en « non abouti »"+(v.err?" · "+v.err+" erreur(s) de lecture":""):"Pas encore faite."}</p></section>
+  <section class="card"><h2>Journal des refus HelloAsso</h2>${L.length?`<div class="scroll"><table><thead><tr><th>Date</th><th>Vente</th><th class="num">Commande</th><th>Détail</th></tr></thead><tbody>${L.map(x=>`<tr class="${x.h==="alerte"?"na":""}"><td class="sub">${dt(x.t)}</td><td>${esc(x.c)}</td><td class="num">${esc(x.n)}</td><td class="sub">${esc(x.e)}</td></tr>`).join("")}</tbody></table></div>`:`<p class="muted" style="margin:0">Aucun refus enregistré.</p>`}
+  <p class="note">À partir de 3 refus en moins d’1 h (toutes ventes), un mail d’alerte part à contact@labrasseriestephanoise.com, une fois par heure au maximum.</p></section>
+  <section class="card"><h2>Notification HelloAsso (facultatif)</h2><p class="note" style="margin-top:0">Pour un « Payé » immédiat, l’association peut coller cette adresse dans son compte HelloAsso (Mon Compte › Intégration et API › Notifications). Sans elle, la vérification toutes les 15 min suffit. Le contenu de la notification n’est pas cru : l’appli revérifie toujours le paiement auprès de HelloAsso.</p><div class="link"><div class="l"><code>${esc(h.notifUrl||"")}</code></div><button class="btn small" type="button" data-copy="${esc(h.notifUrl||"")}">Copier</button></div></section>
+  ${h.test?`<section class="card"><h2>Essai : simuler un refus HelloAsso</h2><p class="note" style="margin-top:0">Copie de test seulement. Tant que c’est activé, toute demande de paiement est refusée comme si HelloAsso répondait 400.</p><div class="bar"><button class="btn${h.simul?" primary":""}" type="button" data-hasimul="${h.simul?0:1}">${h.simul?"Simulation ACTIVE : la couper":"Activer la simulation"}</button></div></section>`:""}`; }
 function haCard(){ const h=S.cur.ha||{};
   return `<section class="card"><h2>Paiement en ligne HelloAsso</h2>
     <label class="bar" style="font-size:14px"><input type="checkbox" data-haallow ${h.allow?"checked":""}> Proposer à l’organisateur de brancher son paiement HelloAsso</label>
     <p class="note" style="margin:6px 0 0">${!h.allow?"L’organisateur ne voit pas l’option.":h.on?`Activé par l’organisateur${h.slug?" · "+esc(h.slug):""}${h.env==="prod"?"":" · compte de test"} : les acheteurs paient en ligne et les commandes se cochent « payé » toutes seules.`:"Option proposée : l’organisateur l’active lui-même depuis son lien de suivi, avec la clé API de son compte HelloAsso (Mon Compte › Intégration et API). La brasserie n’a jamais accès à cette clé."}</p></section>`; }
 function vVente(){
   const C = S.cur, v = C.vente, cf = C.config, st = status(v), t = totals();
-  const tabs = [["apercu","Aperçu"],["infos","Infos"],["produits","Produits et prix"],["commandes","Commandes ("+C.orders.length+")"],["exports","Récaps"],["mails","Mails et relances"]];
+  const tabs = [["apercu","Aperçu"],["infos","Infos"],["produits","Produits et prix"],["commandes","Commandes ("+(C.all||C.orders).length+")"],["exports","Récaps"],["mails","Mails et relances"]];
   let body = "";
   if (S.tab==="apercu") body = `<div class="sum">
       ${cf.resale?`<div><b>${eur(t.enc)}</b><span>payé par les acheteurs</span></div><div class="hl"><b>${eur(t.fac)}</b><span>à facturer à l’organisateur</span></div><div><b>${eur(t.enc-t.fac)}</b><span>marge de l’organisateur</span></div>`
       :`<div class="hl"><b>${eur(t.fac)}</b><span>à facturer${cf.pro?" HT":""}</span></div>`}
-      <div><b>${C.orders.length}</b><span>commandes</span></div></div>
+      <div><b>${C.orders.length}</b><span>commandes${(C.all||C.orders).length>C.orders.length?" · "+((C.all||C.orders).length-C.orders.length)+" non abouti(s), hors totaux":""}</span></div></div>
     ${v.livraison&&v.dateOk===false?`<section class="card" style="border-color:var(--warn)"><h2>Date de livraison à confirmer</h2><p style="margin:0">L’organisateur demande une livraison le <b>${dfr(v.livraison)}</b>${v.limite?" (date limite de commande : "+dfr(v.limite)+")":""}.</p><div class="bar"><button class="btn primary" type="button" data-confirmdate>Confirmer cette date</button><span class="muted">ou</span><input type="date" id="altdate" class="price" style="width:auto"><button class="btn" type="button" data-confirmalt>Confirmer une autre date</button></div><p class="note">L’organisateur reçoit un e-mail de confirmation.</p></section>`:""}
     <section class="card"><h2>Liens</h2><div class="links">
       <div class="link"><div class="l"><b>Lien à diffuser</b> <span class="sub">${cf.pro?"aux participants (professionnels)":cf.resale?"aux adhérents / parents":"aux salariés"}</span><code>${esc(venteUrl(v))}</code></div><button class="btn small" type="button" data-copy="${esc(venteUrl(v))}">Copier</button></div>
@@ -299,8 +318,7 @@ function vVente(){
       <div class="bar"><span class="seg" role="group" aria-label="Type de vente"><button type="button" data-ctype="std" data-scope="vente" aria-pressed="${!S.edit.resale&&!S.edit.pro}">Standard</button><button type="button" data-ctype="resale" data-scope="vente" aria-pressed="${!!S.edit.resale}">Revente avec marge</button><button type="button" data-ctype="pro" data-scope="vente" aria-pressed="${!!S.edit.pro}">Pro (prix HT)</button></span></div>
       ${priceTable(S.edit.prix, S.edit.resale, "vente", S.edit.formats)}
       <div class="bar"><button class="btn primary" type="button" data-saveprix>Enregistrer les produits et prix</button></div></section>`;
-  if (S.tab==="commandes") body = `<section class="card"><div class="scroll"><table><thead><tr><th class="num">N°</th><th>Nom</th><th>Service</th><th>Détail</th><th class="num">${cf.resale?"Payé par l’acheteur":"Montant"}</th>${cf.resale?'<th class="num">Prix brasserie</th>':""}</tr></thead>
-    <tbody>${C.orders.map(o=>`<tr><td class="num">${o.n}</td><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><div class="sub">${esc(o.date)}</div></td><td class="muted">${esc(o.service)}</td><td class="sub">${detail(o)}</td><td class="num">${eur(o.montant)}</td>${cf.resale?`<td class="num">${eur(o.montantB==null?o.montant:o.montantB)}</td>`:""}</tr>`).join("") || `<tr><td colspan="6" class="muted">Aucune commande pour l’instant.</td></tr>`}</tbody></table></div></section>`;
+  if (S.tab==="commandes") body = cmdHtml(C, cf);
   if (S.tab==="exports") body = distHtml() + vExports();
   if (S.tab==="mails") body = vMails();
   return `<div><button class="back" type="button" data-nav="ventes">← Toutes les ventes</button></div>
@@ -666,9 +684,10 @@ function render(){
   const na=document.getElementById("navAcces"); if(na) na.hidden=role!=="admin";
   const nf=document.getElementById("navFact"); if(nf) nf.hidden=role!=="admin";
   const nc=document.getElementById("navContacts"); if(nc) nc.hidden=!(role==="admin"||role==="gestion");
+  const np=document.getElementById("navPay"); if(np) np.hidden=!(role==="admin"||role==="gestion");
   const who=document.getElementById("who"); if(who) who.innerHTML=S.view!=="login"&&D&&D.me?`${esc(D.me.email)} · ${ROLE_LAB[role]||role} · <button class="back" type="button" data-logout>Se déconnecter</button>`:"";
   setTimeout(()=>{ if(S.view==="login") gisButton(); },0);
-  a.innerHTML = vgBanner() + (S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():S.view==="contacts"?vContacts():S.view==="facturer"?vFacturer():vCatalogue());
+  a.innerHTML = vgBanner() + (S.view==="login"?vLogin():S.view==="acces"?vAcces():S.view==="ventes"?vVentes():S.view==="vente"?vVente():S.view==="nouvelle"?vNouvelle():S.view==="grilles"?vGrilles():S.view==="contacts"?vContacts():S.view==="facturer"?vFacturer():S.view==="paiements"?vPaiements():vCatalogue());
 }
 function vgBanner(){ if(S.view==="login"||!D) return ""; const e=S.vg&&S.vg.key!==undefined?{bad:S.vg.bad,ok:S.vg.okAt}:(D.vgEtat||{}); if(!e||!e.bad) return "";
   return `<section class="card" role="alert" style="background:#C0392B;color:#fff;border-color:#C0392B"><b>Liaison avec l’Espace coupée : l’Espace répond « clé invalide »</b> (depuis le ${esc(e.bad)}).<br>Dernier appel réussi : ${e.ok?esc(e.ok):"aucun"}. Les ruptures et le stock viennent de la dernière copie (24 h maximum). Recolle une clé valide dans Catalogue › Liaison avec l’Espace.</section>`; }
@@ -681,7 +700,7 @@ async function prefetch(){ const vs=(D.ventes||[]).filter(v=>v.ouvert).slice(0,6
 async function openVente(code){ const tab=S.view==="vente"&&S.cur&&S.cur.vente.code===code?S.tab:"apercu";
   if(VC[code]){ setCur(VC[code]); go("vente",{tab,exp:null}); later(async()=>{ const j=await api("vente",{code}); const same=JSON.stringify(j.data)===JSON.stringify(VC[code]); VC[code]=j.data; if(!same&&S.view==="vente"&&S.cur.vente.code===code&&!S.typed){ setCur(j.data); render(); } }); return; }
   const j=await api("vente",{code}); setCur(j.data); go("vente",{tab,exp:null}); }
-function setCur(data){ S.cur=data; S.typed=false; if(data&&data.vente) VC[data.vente.code]=data; const v=data.vente, c=data.config;
+function setCur(data){ S.cur=Object.assign({},data,{all:data.orders,orders:(data.orders||[]).filter(o=>o.pst!=="na")}); S.typed=false; if(data&&data.vente) VC[data.vente.code]=data; const v=data.vente, c=data.config;
   S.edit={nom:v.nom,code:v.code,resp:v.resp,email:v.email,tel:v.tel,limite:v.limite,livraison:v.livraison,lieu:v.lieu,livraisonTxt:v.livraisonTxt,
     creneau:v.creneau,par:v.par||"",contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,pro:!!c.pro,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
   const i=D.ventes.findIndex(x=>x.code===v.code); const sv=Object.assign({},v,{configured:c.configured}); if(i>=0) D.ventes[i]=sv; else D.ventes.unshift(sv); }
@@ -689,7 +708,11 @@ function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email
 function cfgOf(d){ return {resale:!!d.resale&&!d.pro,pro:!!d.pro,grille:d.grille||"",formats:d.formats,prix:d.prix}; }
 
 document.addEventListener("click",e=>{
-  const t=e.target.closest("button,[data-open]"); if(!t) return; const d=t.dataset;
+  const t=e.target.closest("button,[data-open],[data-ord]"); if(!t) return; const d=t.dataset;
+  if(d.ord!==undefined&&t.tagName!=="BUTTON"){ if(e.target.closest("button,a")) return; S.ord=S.ord==d.ord?null:d.ord; render(); return; }
+  if(d.nav==="paiements"||d.haverif!==undefined||d.hasimul!==undefined){ if(d.nav) go("paiements"); render(); run("",async()=>{ const r=await api(d.haverif!==undefined?"haVerif":d.hasimul!==undefined?"haSimul":"haLog",d.hasimul!==undefined?{on:d.hasimul==="1"}:{}); if(d.haverif!==undefined){ const v=r.r; S.hal=(await api("haLog")); toast("Vérifié : "+v.chk+" commande(s), "+v.paid+" payée(s), "+v.na+" non abouti(s)"); } else { S.hal=r; if(d.hasimul!==undefined) toast(r.simul?"Simulation de refus activée":"Simulation coupée"); } render(); }); return; }
+  if(d.halien){ const env=d.env==="1", o=(S.cur.all||[]).find(x=>String(x.n)===d.halien)||{}; if(env&&t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer l’envoi à "+(o.email||"l’acheteur"); return; }
+    run("",async()=>{ const j=await api("haLien",{code:S.cur.vente.code,n:Number(d.halien),envoyer:env}); if(env){ toast("Lien de paiement envoyé à "+j.envoye); const k=await api("vente",{code:S.cur.vente.code}); setCur(k.data); render(); } else { S.lien={n:d.halien,url:j.url}; render(); copy(j.url); } }); return; }
   if(d.logout!==undefined){ logout(); return; }
   if(d.vgkey!==undefined){ const k=($("#vg-key")||{}).value||""; if(!k.trim()){ toast("Colle d’abord la clé"); return; } run("",async()=>{ const j=await api("vgKey",{key:k.trim()}); S.vg=j.data; render(); toast("Clé enregistrée : catalogue de l’Espace copié"); }); return; }
   if(d.vgon!==undefined){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const j=await api("vgResOn",{on:d.vgon==="1"}); S.vg=j.data; render(); toast(j.data.resOn?"Envoi des réservations activé":"Envoi des réservations coupé"); }); return; }
