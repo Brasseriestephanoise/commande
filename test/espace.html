@@ -199,7 +199,9 @@ let D = null;            // {ventes, grilles, catalogue, url}
 let P = [], byId = {};   // catalogue
 const CATS = [["classique","Bières classiques"],["speciale","Bières spéciales"],["soft","Softs"],["box","Coffrets"]];
 const FALL = {b33:true,b75:true,soft:true,box:true};
-const FMTS = [["b33","Bières 33 cl (cartons de 12)"],["b75","Bières 75 cl (cartons de 6)"],["soft","Softs (dans les cartons de 33 cl)"],["box","Coffrets"]];
+function cartK(){ return (S.view==="vente"&&S.cur&&S.cur.vente&&Number(S.cur.vente.carton))||12; }
+function ctnTxt(n,k,lab){ n=Number(n)||0; const f=Math.floor(n/k), r=n%k; if(!n) return "0 carton"; return (f?f+" carton"+(f>1?"s":"")+" de "+k+(lab||""):"")+(r?(f?" + ":"")+r+" bouteille"+(r>1?"s":"")+(f?"":" (moins d’un carton de "+k+")"):""); }
+const FMTS = [["b33","Bières 33 cl"],["b75","Bières 75 cl (cartons de 6)"],["soft","Softs (dans les cartons de 33 cl)"],["box","Coffrets"]];
 function setCat(c){ P = c; byId = Object.fromEntries(P.map(p=>[p.id,p])); }
 function basePrix(){ const o={}; P.forEach(p=>{ o[p.id] = p.cat==="box" ? {on:p.dispo,b:p.p} : {on:p.dispo,b33:p.p33,b75:p.cat==="soft"?null:p.p75}; }); return o; }
 function grillesAll(){ return [{id:"cse",nom:"CSE classique",desc:"Les prix de base du catalogue. Grille par défaut.",resale:false,locked:true,formats:clone(FALL),prix:basePrix()}].concat(D.grilles); }
@@ -275,7 +277,8 @@ function cmdHtml(C, cf){ const nc=cf.resale?7:6, ha=!!(C.ha&&C.ha.on), A=C.all||
   const det=o=>{ const tel=String(o.tel||"").replace(/^'/,"");
     const co=C.coord?`<div><div class="sub">E-mail</div>${o.email?esc(o.email)+` <button class="btn small" type="button" data-copy="${esc(o.email)}">Copier</button>`:"–"}</div><div><div class="sub">Téléphone</div>${tel?esc(tel)+` <button class="btn small" type="button" data-copy="${esc(tel)}">Copier</button>`:"–"}</div>`:`<div class="muted">Coordonnées réservées aux accès Admin et Gestion.</div>`;
     const pay=ha&&C.coord&&o.pst!=="ok"?`<div class="bar"><button class="btn small primary" type="button" data-halien="${o.n}" data-env="1">Envoyer le lien de paiement</button><button class="btn small" type="button" data-halien="${o.n}">Copier le lien</button>${o.lien?`<span class="note">Lien envoyé le ${esc(o.lien)}</span>`:""}</div>${S.lien&&S.lien.n==o.n?`<p class="note" style="overflow-wrap:anywhere">Lien de paiement : <code>${esc(S.lien.url)}</code></p>`:""}`:"";
-    return `<tr class="odet${o.pst==="na"?" na":""}"><td></td><td colspan="${nc-1}"><div class="grid2">${co}</div>${o.pst==="na"?`<p class="note">Commande gardée mais sortie de la préparation, des totaux, de la liste de distribution et du stock réservé. Elle revient si l’organisateur coche « Payé ».</p>`:""}${pay}</td></tr>`; };
+    const del=C.coord?`<div class="bar"><button class="btn small" type="button" data-ordel="${o.n}" style="color:var(--warn)">Supprimer la commande</button><span class="note">Rangée dans « Commandes annulées », jamais effacée.</span></div>`:"";
+    return `<tr class="odet${o.pst==="na"?" na":""}"><td></td><td colspan="${nc-1}"><div class="grid2">${co}</div>${del}${o.pst==="na"?`<p class="note">Commande gardée mais sortie de la préparation, des totaux, de la liste de distribution et du stock réservé. Elle revient si l’organisateur coche « Payé ».</p>`:""}${pay}</td></tr>`; };
   return `<section class="card">${nna?`<p class="note" style="margin-top:0"><span class="pill na">${nna} paiement${nna>1?"s":""} non abouti${nna>1?"s":""}</span> hors totaux, préparation, distribution et stock réservé.</p>`:""}<p class="note" style="margin-top:0">Clique sur une commande pour voir les coordonnées de l’acheteur${ha?" et le lien de paiement":""}.</p><div class="scroll"><table><thead><tr><th class="num">N°</th><th>Nom</th><th>Service</th><th>Détail</th><th class="num">${cf.resale?"Payé par l’acheteur":"Montant"}</th>${cf.resale?'<th class="num">Prix brasserie</th>':""}</tr></thead>
     <tbody>${A.map(o=>`<tr class="row${o.pst==="na"?" na":""}" data-ord="${o.n}" aria-expanded="${S.ord==o.n}"><td class="num">${o.n}</td><td><b>${esc(o.prenom)} ${esc(o.nom)}</b><div class="sub">${esc(o.date)}</div>${pstTag(o)}</td><td class="muted">${esc(o.service)}</td><td class="sub">${detail(o)}</td><td class="num">${eur(o.montant)}</td>${cf.resale?`<td class="num">${eur(o.montantB==null?o.montant:o.montantB)}</td>`:""}</tr>${S.ord==o.n?det(o):""}`).join("") || `<tr><td colspan="6" class="muted">Aucune commande pour l’instant.</td></tr>`}</tbody></table></div></section>`; }
 function vPaiements(){ const h=S.hal; if(!h) return `<h1>Paiements HelloAsso</h1><p class="muted">Chargement…</p>`;
@@ -309,7 +312,7 @@ function vVente(){
       <div><div class="sub">Livraison / retrait</div>${[v.livraison?dfr(v.livraison):v.livraisonTxt,v.lieu].filter(Boolean).map(esc).join(" · ")||"–"}</div>
       <div><div class="sub">Créneau · paiement · contact</div>${esc([v.creneau,v.paiement,v.contact].filter(Boolean).join(" · ")||"–")}</div>
       <div><div class="sub">Date de livraison</div>${v.livraison?(v.dateOk===false?"À confirmer":"Confirmée"):"–"}</div>
-      <div><div class="sub">Formats</div>${FMTS.filter(([k])=>cf.formats[k]).map(([,l])=>l).join(", ")}</div>
+      <div><div class="sub">Formats</div>${FMTS.filter(([k])=>cf.formats[k]).map(([k,l])=>k==="b33"?l+" (cartons de "+cartK()+")":k==="b75"?l:l).join(", ")}</div>
     </div>${cf.configured?"":`<p class="note">Vente créée avant l’Espace brasserie : elle garde le fonctionnement d’origine (catalogue et prix de base, sans softs) tant que tu n’enregistres pas de changement.</p>`}</section>`;
   if (S.tab==="infos") body = `<section class="card"><h2>Infos de la vente</h2>${infoFields(S.edit, false)}
       <div class="bar"><button class="btn primary" type="button" data-saveinfos>Enregistrer</button></div></section>${haCard()}`;
@@ -353,7 +356,7 @@ function vExports(){
   if(S.exp==="prep"){
     let t33=0,t75=0,ts=0,tb=0; const rows=P.filter(p=>q[p.id]).map(p=>{const x=q[p.id];t33+=x.q33;t75+=x.q75;ts+=x.soft;tb+=x.bx;return `<tr><td><span class="dot" style="background:${p.c}"></span>${esc(p.n)}</td><td class="num">${p.cat==="soft"?x.soft||"–":x.q33||"–"}</td><td class="num">${x.q75||"–"}</td><td class="num">${x.bx||"–"}</td></tr>`;}).join("");
     html+=`<div class="preview"><div class="head"><h3>Préparation · ${esc(v.nom)}</h3><div class="bar"><button class="btn small primary" type="button" data-xls="prep">Télécharger Excel</button></div></div>
-      <div class="sum">${t33+ts?`<div><b>${(t33+ts)/12}</b><span>cartons 12 × 33 cl · ${t33} bières${ts?" + "+ts+" softs":""}</span></div>`:""}${t75?`<div><b>${t75/6}</b><span>cartons bière 6 × 75 cl · ${t75} bouteilles</span></div>`:""}${tb?`<div><b>${tb}</b><span>coffrets</span></div>`:""}</div>
+      <div class="sum">${t33+ts?`<div><b>${ctnTxt(t33+ts,cartK()," × 33 cl")}</b><span>${t33} bières${ts?" + "+ts+" softs":""} en 33 cl</span></div>`:""}${t75?`<div><b>${ctnTxt(t75,6," × 75 cl")}</b><span>${t75} bouteilles de 75 cl</span></div>`:""}${tb?`<div><b>${tb}</b><span>coffrets</span></div>`:""}</div>
       <div class="scroll"><table><thead><tr><th>Produit</th><th class="num">33 cl</th><th class="num">75 cl</th><th class="num">Coffrets</th></tr></thead><tbody>${rows||`<tr><td colspan="4" class="muted">Aucune commande.</td></tr>`}</tbody></table></div>
       <p class="note">Le fichier Excel contient 3 onglets : « Préparation » (client par client, carton par carton, avec cases Préparé / Payé), « Récap » (stock à sortir) et « Tableau » (une ligne par client, une colonne par produit).</p></div>`;
   }
@@ -385,7 +388,8 @@ async function xlsPrep(){
   const O=S.cur.orders.slice().sort((a,b)=>a.n-b.n);
   const up=(p,f)=>{ const c=pr[p.id]||{}; if(p.cat==="box") return cf.resale?(c.v??c.b??p.p):(c.b??p.p); const k=f==="75"?"75":"33", base=p["p"+k];
     return cf.resale?(c["v"+k]??c["b"+k]??base):(c["b"+k]??base); };
-  const FM=[["33","Carton bière 12 × 33 cl",12,"33 CL","FCE4D6"],["75","Carton bière 6 × 75 cl",6,"75 CL","DDEBF7"],["soft","Carton soft 12 × 33 cl",12,"SOFTS","E2EFDA"]];
+  const K=cartK(), ct=(n,d)=>{ n=Number(n)||0; if(!n||!d) return null; const f=Math.floor(n/d), r=n%d; return r?(f?f+" carton"+(f>1?"s":"")+" + ":"")+r+" bouteille"+(r>1?"s":""):f; };
+  const FM=[["33","Carton bière "+K+" × 33 cl",K,"33 CL","FCE4D6"],["75","Carton bière 6 × 75 cl",6,"75 CL","DDEBF7"],["soft","Carton soft "+K+" × 33 cl",K,"SOFTS","E2EFDA"]];
   const qOf=(o,f,p)=>f==="box"?((o.bx||{})[p.id]||0):(((o.q||{})[f]||{})[p.id]||0);
   const prods=f=>P.filter(p=>f==="box"?p.cat==="box":f==="soft"?p.cat==="soft":(p.cat!=="soft"&&p.cat!=="box"));
   const nb=x=>Number.isInteger(x)?x:Math.round(x*100)/100;
@@ -405,9 +409,9 @@ async function xlsPrep(){
     const rows=[];
     FM.forEach(([f,lab,div])=>{ if(f==="soft") return;
       const it=prods(f).map(p=>[p,qOf(o,f,p),f]).concat(f==="33"?prods("soft").map(p=>[p,qOf(o,"soft",p),"soft"]):[]).filter(x=>x[1]); if(!it.length) return;
-      const hasS=it.some(x=>x[2]==="soft"), hasB=it.some(x=>x[2]!=="soft"); if(f==="33") lab=hasS&&!hasB?"Carton 12 × 33 cl (softs)":hasS?"Carton 12 × 33 cl (bières + softs)":"Carton bière 12 × 33 cl";
-      const n=it.reduce((a,x)=>a+x[1],0), m=it.reduce((a,[p,q,ff])=>a+q*up(p,ff),0), k=nb(n/div);
-      rows.push([k===1?lab:k+" × "+lab, it.map(([p,q])=>q+" "+p.n).join(", "), n, m]); });
+      const hasS=it.some(x=>x[2]==="soft"), hasB=it.some(x=>x[2]!=="soft"); if(f==="33") lab=hasS&&!hasB?"Carton "+K+" × 33 cl (softs)":hasS?"Carton "+K+" × 33 cl (bières + softs)":"Carton bière "+K+" × 33 cl";
+      const n=it.reduce((a,x)=>a+x[1],0), m=it.reduce((a,[p,q,ff])=>a+q*up(p,ff),0), kf=Math.floor(n/div), kr=n%div;
+      rows.push([(kf?(kf===1?lab:kf+" × "+lab):"")+(kr?(kf?" + ":"")+kr+" bouteille"+(kr>1?"s":"")+" (carton incomplet)":""), it.map(([p,q])=>q+" "+p.n).join(", "), n, m]); });
     const bx=prods("box").map(p=>[p,qOf(o,"box",p)]).filter(x=>x[1]);
     if(bx.length) rows.push([bx.map(([p,q])=>q+" × "+p.n).join(", "), o.compo||"", "", bx.reduce((a,[p,q])=>a+q*up(p),0)]);
     if(!rows.length) rows.push(["","(commande vide)","",0]);
@@ -433,26 +437,26 @@ async function xlsPrep(){
   let rr=5; const tots=[];
   FM.concat([["box","",0,"COFFRETS","FFF2CC"]]).forEach(([f,lab,div,g,col])=>{ let tot=0;
     prods(f).forEach(p=>{ const n=O.reduce((a,o)=>a+qOf(o,f,p),0); if(!n) return; tot+=n;
-      const X=R.getRow(rr++); X.values=[g,p.n,n,div&&f==="75"?nb(n/div):null]; X.eachCell({includeEmpty:true},(c,k)=>{ if(k<=4){ c.border=BD; if(k===1) c.fill=fill(col); if(k>=3) c.alignment={horizontal:"center"}; }}); });
-    if(tot) tots.push([g==="COFFRETS"?"Total coffrets":"Total "+g.toLowerCase(),tot,(div&&f!=="soft"&&f!=="33")?nb(tot/div):null,f]); });
-  { const t33=(tots.find(t=>t[3]==="33")||[])[1]||0, ts=(tots.find(t=>t[3]==="soft")||[])[1]||0; if(t33||ts) tots.push(["Cartons 33 cl (bières + softs mélangés)",t33+ts,nb((t33+ts)/12)]); }
+      const X=R.getRow(rr++); X.values=[g,p.n,n,div&&f==="75"?ct(n,div):null]; X.eachCell({includeEmpty:true},(c,k)=>{ if(k<=4){ c.border=BD; if(k===1) c.fill=fill(col); if(k>=3) c.alignment={horizontal:"center"}; }}); });
+    if(tot) tots.push([g==="COFFRETS"?"Total coffrets":"Total "+g.toLowerCase(),tot,(div&&f!=="soft"&&f!=="33")?ct(tot,div):null,f]); });
+  { const t33=(tots.find(t=>t[3]==="33")||[])[1]||0, ts=(tots.find(t=>t[3]==="soft")||[])[1]||0; if(t33||ts) tots.push(["Cartons de "+K+" × 33 cl (bières + softs mélangés)",t33+ts,ct(t33+ts,K)]); }
   rr++; tots.forEach(t=>{ const X=R.getRow(rr++); X.values=[null,t[0],t[1],t[2]]; X.font={bold:true}; X.getCell(3).alignment=X.getCell(4).alignment={horizontal:"center"}; });
   const M=R.getRow(rr); M.values=[null,"MONTANT TOTAL",Math.round(totV*100)/100]; M.font={bold:true,size:12}; M.getCell(3).numFmt=EUR;
   // ---------- TABLEAU ----------
   const G=[]; FM.concat([["box","",0,"COFFRETS","FFF2CC"]]).forEach(([f,lab,div,g,col])=>prods(f).forEach(p=>{ if(O.some(o=>qOf(o,f,p))) G.push({f,p,g,col,div,u:up(p,f)}); }));
   const T=wb.addWorksheet("TABLEAU",{views:[{state:"frozen",xSplit:3,ySplit:6}],pageSetup:{orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}});
   head(T,"Tableau des commandes");
-  const c0=4, end=c0+G.length-1, ex=["Bouteilles\n33 cl","Cartons 12×33\n(+ softs)","Bouteilles\n75 cl","Cartons\n6×75","Softs","","Coffrets","Montant","Composition des coffrets","Préparé","Payé"];
+  const c0=4, end=c0+G.length-1, ex=["Bouteilles\n33 cl","Cartons "+K+"×33\n(+ softs)","Bouteilles\n75 cl","Cartons\n6×75","Softs","","Coffrets","Montant","Composition des coffrets","Préparé","Payé"];
   T.getRow(5).values=["N°","Nom","Prénom"].concat(G.map(x=>x.p.n),ex); T.getRow(6).getCell(3).value="Prix unitaire";
   let s=c0; ["33 CL","75 CL","SOFTS","COFFRETS"].forEach(g=>{ const n=G.filter(x=>x.g===g).length; if(!n) return; T.getRow(4).getCell(s).value=g; if(n>1) T.mergeCells(4,s,4,s+n-1); s+=n; });
   G.forEach((x,j)=>{ const c=c0+j; T.getRow(6).getCell(c).value=x.u; [4,5,6].forEach(rw=>T.getRow(rw).getCell(c).fill=fill(x.col)); });
   T.getRow(4).font={bold:true,size:12}; T.getRow(4).alignment={horizontal:"center"}; T.getRow(5).height=42;
   const sumF=(o,f,div)=>G.filter(x=>x.f===f).reduce((a,x)=>a+qOf(o,f,x.p),0);
   O.forEach((o,i)=>{ const X=T.getRow(7+i), b33=sumF(o,"33"), b75=sumF(o,"75"), so=sumF(o,"soft"), bx=sumF(o,"box");
-    X.values=[o.n,(o.nom||"").toUpperCase(),o.prenom||""].concat(G.map(x=>qOf(o,x.f,x.p)||null),[b33||null,(b33+so)?nb((b33+so)/12):null,b75||null,b75?nb(b75/6):null,so||null,null,bx||null,o.montant,o.compo||null,"☐","☐"]); });
+    X.values=[o.n,(o.nom||"").toUpperCase(),o.prenom||""].concat(G.map(x=>qOf(o,x.f,x.p)||null),[b33||null,(b33+so)?ct(b33+so,K):null,b75||null,b75?ct(b75,6):null,so||null,null,bx||null,o.montant,o.compo||null,"☐","☐"]); });
   const rt=7+O.length, TT=T.getRow(rt), CT=T.getRow(rt+1); TT.getCell(2).value="TOTAL"; CT.getCell(2).value="Cartons";
   for(let c=c0;c<=end+8;c++){ let t=0; for(let k=0;k<O.length;k++){ const val=T.getRow(7+k).getCell(c).value; t+=typeof val==="number"?val:0; } TT.getCell(c).value=Math.round(t*100)/100; }
-  G.forEach((x,j)=>{ if(x.div) CT.getCell(c0+j).value=nb(TT.getCell(c0+j).value/x.div); });
+  G.forEach((x,j)=>{ if(x.div) CT.getCell(c0+j).value=ct(TT.getCell(c0+j).value,x.div); });
   T.getColumn(1).width=5; T.getColumn(2).width=14; T.getColumn(3).width=12; for(let c=c0;c<=end+11;c++) T.getColumn(c).width=10; T.getColumn(end+9).width=34;
   for(let rw=4; rw<=rt+1; rw++) for(let c=1;c<=end+11;c++){ const C=T.getRow(rw).getCell(c); C.border=BD;
     if(rw===5) { C.font={bold:true}; C.alignment={wrapText:true,horizontal:"center",vertical:"middle"}; }
@@ -515,7 +519,7 @@ function infoFields(d, isNew){
   const f=(k,l,ph,type="text")=>`<div class="field"><label for="d-${k}">${l}</label><input id="d-${k}" data-d="${k}" type="${type}" placeholder="${esc(ph)}" value="${esc(d[k]||"")}" ${k==="code"&&!isNew?"disabled":""}></div>`;
   return `<div class="grid2">${f("nom","Nom de la vente","Ex. APE École Jules Ferry")}${f("code","Code du lien",isNew?"se remplit tout seul":"")}
     ${f("resp","Responsable","Prénom Nom")}${f("email","E-mail du responsable","Pour lui envoyer son lien de suivi","email")}${f("tel","Téléphone du responsable","")}
-    ${f("limite","Date limite de commande","","date")}${f("livraison","Date de livraison / retrait","","date")}${f("lieu","Lieu de livraison","Ex. Accueil du site")}${f("creneau","Créneau de retrait","Ex. vendredi 16 h 30 – 18 h")}${f("contact","Contact sur place (affiché aux acheteurs)","Ex. Marie, 06 12 34 56 78")}${f("paiement","Modalités de paiement","Ex. chèque à l’ordre de l’APE")}${f("par","« Commande organisée par » (page de commande)","Vide = nom de la vente")}${f("message","Message d’accueil (page de commande)","Ex. Vente au profit du voyage des CM2")}</div>
+    ${f("limite","Date limite de commande","","date")}${f("livraison","Date de livraison / retrait","","date")}${f("lieu","Lieu de livraison","Ex. Accueil du site")}${f("creneau","Créneau de retrait","Ex. vendredi 16 h 30 – 18 h")}${f("contact","Contact sur place (affiché aux acheteurs)","Ex. Marie, 06 12 34 56 78")}${f("paiement","Modalités de paiement","Ex. chèque à l’ordre de l’APE")}${f("par","« Commande organisée par » (page de commande)","Vide = nom de la vente")}${f("message","Message d’accueil (page de commande)","Ex. Vente au profit du voyage des CM2")}<div class="field"><label for="d-carton">Cartons de 33 cl (bières et softs)</label><select id="d-carton" data-d="carton"><option value="12" ${String(d.carton||12)==="12"?"selected":""}>Cartons de 12</option><option value="6" ${String(d.carton)==="6"?"selected":""}>Cartons de 6</option></select></div></div>
     ${isNew?"":`<p class="note">Le code du lien ne change plus une fois la vente créée : les liens ont peut-être déjà été envoyés.</p>`}`;
 }
 function vNouvelle(){
@@ -602,7 +606,7 @@ function vCatalogue(){
       <td class="num"><input class="price" data-cid="${p.id}" data-ck="${cat==="box"?"p":"p33"}" value="${fx(cat==="box"?x.p:x.p33)}"></td>
       <td class="num">${cat==="box"||cat==="soft"?"":`<input class="price" data-cid="${p.id}" data-ck="p75" value="${fx(x.p75)}">`}</td>
       ${cat==="box"?"":`<td><label class="btn ghost small" style="cursor:pointer">${x.img?"✓ Nouvelle image":"Changer l’image"}<input type="file" accept="image/png,image/jpeg,image/webp" data-cimg="${p.id}" hidden></label></td>`}</tr>${S.fiche===p.id?ficheHtml(p,x,5):""}`;}).join("")}
-  </tbody></table></div>${cat==="soft"?'<p class="note">Les softs se mélangent avec les bières 33 cl dans les mêmes cartons de 12.</p>':""}</section>`;}).join("")}`;
+  </tbody></table></div>${cat==="soft"?'<p class="note">Les softs se mélangent avec les bières 33 cl dans les mêmes cartons'+(S.view==="vente"&&S.cur?' de '+cartK():'')+'.</p>':""}</section>`;}).join("")}`;
 }
 function newProdHtml(){ const n=S.newProd;
   return `<section class="card"><h2>Nouveau produit</h2><div class="grid2">
@@ -702,9 +706,9 @@ async function openVente(code){ const tab=S.view==="vente"&&S.cur&&S.cur.vente.c
   const j=await api("vente",{code}); setCur(j.data); go("vente",{tab,exp:null}); }
 function setCur(data){ S.cur=Object.assign({},data,{all:data.orders,orders:(data.orders||[]).filter(o=>o.pst!=="na")}); S.typed=false; if(data&&data.vente) VC[data.vente.code]=data; const v=data.vente, c=data.config;
   S.edit={nom:v.nom,code:v.code,resp:v.resp,email:v.email,tel:v.tel,limite:v.limite,livraison:v.livraison,lieu:v.lieu,livraisonTxt:v.livraisonTxt,
-    creneau:v.creneau,par:v.par||"",contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,pro:!!c.pro,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
+    creneau:v.creneau,par:v.par||"",carton:v.carton||12,contact:v.contact,message:v.message,paiement:v.paiement,resale:c.resale,pro:!!c.pro,grille:c.grille,formats:clone(c.formats),prix:fillPrix(c.prix)};
   const i=D.ventes.findIndex(x=>x.code===v.code); const sv=Object.assign({},v,{configured:c.configured}); if(i>=0) D.ventes[i]=sv; else D.ventes.unshift(sv); }
-function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email,tel:d.tel,limite:d.limite,livraison:d.livraison,livraisonTxt:d.livraison?"":d.livraisonTxt,lieu:d.lieu,creneau:d.creneau,contact:d.contact,message:d.message,paiement:d.paiement,par:d.par}; }
+function venteFields(d){ return {nom:d.nom,code:d.code,resp:d.resp,email:d.email,tel:d.tel,limite:d.limite,livraison:d.livraison,livraisonTxt:d.livraison?"":d.livraisonTxt,lieu:d.lieu,creneau:d.creneau,contact:d.contact,message:d.message,paiement:d.paiement,par:d.par,carton:d.carton}; }
 function cfgOf(d){ return {resale:!!d.resale&&!d.pro,pro:!!d.pro,grille:d.grille||"",formats:d.formats,prix:d.prix}; }
 
 document.addEventListener("click",e=>{
@@ -712,7 +716,13 @@ document.addEventListener("click",e=>{
   if(d.ord!==undefined&&t.tagName!=="BUTTON"){ if(e.target.closest("button,a")) return; S.ord=S.ord==d.ord?null:d.ord; render(); return; }
   if(d.nav==="paiements"||d.haverif!==undefined||d.hasimul!==undefined){ if(d.nav) go("paiements"); render(); run("",async()=>{ const r=await api(d.haverif!==undefined?"haVerif":d.hasimul!==undefined?"haSimul":"haLog",d.hasimul!==undefined?{on:d.hasimul==="1"}:{}); if(d.haverif!==undefined){ const v=r.r; S.hal=(await api("haLog")); toast("Vérifié : "+v.chk+" commande(s), "+v.paid+" payée(s), "+v.na+" non abouti(s)"); } else { S.hal=r; if(d.hasimul!==undefined) toast(r.simul?"Simulation de refus activée":"Simulation coupée"); } render(); }); return; }
   if(d.halien){ const env=d.env==="1", o=(S.cur.all||[]).find(x=>String(x.n)===d.halien)||{}; if(env&&t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer l’envoi à "+(o.email||"l’acheteur"); return; }
-    run("",async()=>{ const j=await api("haLien",{code:S.cur.vente.code,n:Number(d.halien),envoyer:env}); if(env){ toast("Lien de paiement envoyé à "+j.envoye); const k=await api("vente",{code:S.cur.vente.code}); setCur(k.data); render(); } else { S.lien={n:d.halien,url:j.url}; render(); copy(j.url); } }); return; }
+    if(env){ const old=o.lien; o.lien=new Date().toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})+" · envoi en cours"; render(); toast("Lien de paiement envoyé à "+(o.email||"l’acheteur"));
+      later(async()=>{ const j=await api("haLien",{code:S.cur.vente.code,n:Number(d.halien),envoyer:true}); o.lien=o.lien.replace(" · envoi en cours"," · toi"); if(S.view==="vente") render(); }, ()=>{ o.lien=old; if(S.view==="vente") render(); toast("Le lien n’a pas pu être envoyé : réessaie."); }); return; }
+    run("",async()=>{ const j=await api("haLien",{code:S.cur.vente.code,n:Number(d.halien),envoyer:false}); S.lien={n:d.halien,url:j.url}; render(); copy(j.url); }); return; }
+  if(d.ordel){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer : supprimer la commande n° "+d.ordel; return; }
+    const C=S.cur, code=C.vente.code, A=C.all||C.orders, i=A.findIndex(x=>String(x.n)===d.ordel), o=A[i]; if(i<0) return;
+    A.splice(i,1); C.orders=A.filter(x=>x.pst!=="na"); S.ord=null; render(); toast("Commande n° "+d.ordel+" supprimée (rangée dans « Commandes annulées »)");
+    later(async()=>{ await api("annuler",{code,n:Number(d.ordel)}); }, ()=>{ A.splice(i,0,o); C.orders=A.filter(x=>x.pst!=="na"); if(S.view==="vente") render(); toast("La commande n° "+d.ordel+" n’a pas pu être supprimée : elle est revenue."); }); return; }
   if(d.logout!==undefined){ logout(); return; }
   if(d.vgkey!==undefined){ const k=($("#vg-key")||{}).value||""; if(!k.trim()){ toast("Colle d’abord la clé"); return; } run("",async()=>{ const j=await api("vgKey",{key:k.trim()}); S.vg=j.data; render(); toast("Clé enregistrée : catalogue de l’Espace copié"); }); return; }
   if(d.vgon!==undefined){ if(t.dataset.c!=="1"){ t.dataset.c="1"; t.textContent="Confirmer"; return; } run("",async()=>{ const j=await api("vgResOn",{on:d.vgon==="1"}); S.vg=j.data; render(); toast(j.data.resOn?"Envoi des réservations activé":"Envoi des réservations coupé"); }); return; }

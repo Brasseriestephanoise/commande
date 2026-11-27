@@ -312,9 +312,9 @@ const LOGO = "https://brasseriestephanoise.github.io/commande/img/logo.png";
 const Q = new URLSearchParams(location.search);
 // Réglages particuliers par vente (code de la vente) : taille de carton et prix boutique barré.
 const PARTICULIER = {
-  "sjbagb": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} },
-  "basket-gargomancois-saint-maurice-wbrg": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} },
-  "asptt-plongee-saint-etienne-bieres-sete": { carton:{"33":6,"soft":6}, boutique:{classique:2.80, speciale:3.10} }
+  "sjbagb": { boutique:{classique:2.80, speciale:3.10} },
+  "basket-gargomancois-saint-maurice-wbrg": { boutique:{classique:2.80, speciale:3.10} },
+  "asptt-plongee-saint-etienne-bieres-sete": { boutique:{classique:2.80, speciale:3.10} }
 };
 const PX = PARTICULIER[String(Q.get("cse")||"").toLowerCase()] || {};
 const escM = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -346,7 +346,7 @@ function startOrder(DATA){
   document.title = "Commande – " + DATA.cse.nom;
 const IMG = DATA.images;
 const CSE = DATA.cse;
-const CARTON = Object.assign({"33":12,"75":6,"soft":12}, DATA.carton||{}, PX.carton||{});
+const CARTON = Object.assign({"33":12,"75":6,"soft":12}, DATA.carton||{});
 const BOUTIQUE = Object.assign({}, DATA.boutique||{}, PX.boutique||{});
 const pBout = (b,f) => f!=="75" && b.g!=="soft" ? (BOUTIQUE[b.g]||0) : 0;
 const F = Object.assign({b33:true,b75:true,soft:false,box:true}, DATA.formats||{});
@@ -797,15 +797,17 @@ S.tab=(TABS()[0]||["33"])[0];
 render();
 }
 
+function qbApply(D,o,s){ const q=o.qb||{}; Object.keys(q).forEach(k=>{ if(k.charAt(0)==="§"){ const b=D.boxes.find(x=>x.n===k.slice(1)); if(b) b.q=Math.max(0,b.q+s*q[k]); } else { const b=D.beers.find(x=>x.n===k); if(b){ b.q33=Math.max(0,b.q33+s*q[k][0]); b.q75=Math.max(0,b.q75+s*q[k][1]); } } }); }
 function startSuivi(D, info){
   document.getElementById("cssPage").media = "not all";
   document.getElementById("cssSuivi").media = "all";
   document.title = "Suivi – " + D.cse.nom;
-const CARTON = Object.assign({"33":12,"75":6,"soft":12}, D.carton||{}, PX.carton||{});
+const CARTON = Object.assign({"33":12,"75":6,"soft":12}, D.carton||{});
+const ctn = (n,k) => { const f=Math.floor(n/k), r=n%k; return n ? (f?f+" carton"+(f>1?"s":"")+" de "+k:"")+(r?(f?" + ":"")+r+" bouteille"+(r>1?"s":""):"") : "0 carton"; };
 const eur = v => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 const esc = t => String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const t33 = D.beers.reduce((a,b)=>a+b.q33,0), t75 = D.beers.reduce((a,b)=>a+b.q75,0), tb = D.boxes.reduce((a,b)=>a+b.q,0);
-const ACT = D.orders.filter(o=>o.pst!=="na"), NNA = D.orders.length-ACT.length, HA = !!(D.ha&&D.ha.on);
+const ACT = D.orders.filter(o=>o.pst!=="na"||o.paye), NNA = D.orders.length-ACT.length, HA = !!(D.ha&&D.ha.on);
 const total = ACT.reduce((a,o)=>a+o.montant,0);
 const pstS = o => !HA&&!o.pst ? "" : o.paye ? `<br><span class="pst ok">Payé</span>` : o.pst==="na" ? `<br><span class="pst na">Paiement non abouti : hors préparation et hors totaux tant que « Payé » n’est pas coché</span>` : o.pst==="att" ? `<br><span class="pst att">En attente de paiement depuis le ${esc(o.date)}</span>` : `<br><span class="pst att">Non payée</span>`;
 const lienB = o => HA&&!o.paye ? `<br><button type="button" class="del lk" data-halien="${esc(o.n)}" data-env="1" data-mail="${esc(o.email)}">Envoyer le lien de paiement</button><button type="button" class="del lk" data-halien="${esc(o.n)}">Copier le lien</button>${o.lien?`<br><span class="det">Lien envoyé le ${esc(o.lien)}</span>`:""}` : "";
@@ -820,8 +822,8 @@ document.getElementById("app").innerHTML = `<main>
   <div class="kpis">
     <div class="kpi"><b>${ACT.length}</b><span>commande${ACT.length>1?"s":""}${NNA?` · ${NNA} non abouti${NNA>1?"es":"e"} (hors totaux)`:""}</span></div>
     <div class="kpi"><b>${eur(total)}</b><span>montant total</span></div>
-    <div class="kpi"><b>${t33}</b><span>bouteilles 33 cl · ${(t33/CARTON["33"]).toLocaleString("fr-FR")} carton${t33/CARTON["33"]>1?"s":""}</span></div>
-    <div class="kpi"><b>${t75}</b><span>bouteilles 75 cl · ${(t75/CARTON["75"]).toLocaleString("fr-FR")} carton${t75/CARTON["75"]>1?"s":""}</span></div>
+    <div class="kpi"><b>${t33}</b><span>bouteilles 33 cl · ${ctn(t33,CARTON["33"])}</span></div>
+    <div class="kpi"><b>${t75}</b><span>bouteilles 75 cl · ${ctn(t75,CARTON["75"])}</span></div>
     ${D.boxes.length?`<div class="kpi"><b>${tb}</b><span>coffret${tb>1?"s":""} cadeau${tb>1?"x":""}</span></div>`:""}
   </div>
   <section class="card"><h2>Par bière</h2><div class="scroll"><table>
@@ -850,13 +852,13 @@ document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
   bg.querySelector(".no").onclick=close; bg.onclick=e=>{ if(e.target===bg && !yes.disabled) close(); };
   bg.querySelector(".no").focus();
   yes.onclick=()=>{
-    yes.disabled=true; yes.textContent="Suppression…"; err.hidden=true;
+    close(); const at=D.orders.indexOf(o), lab="Commande n°"+(o.nv||o.n)+" de "+o.prenom+" "+o.nom;
+    const sy=scrollY; D.orders.splice(at,1); if(o.pst!=="na"||o.paye) qbApply(D,o,-1); startSuivi(D, lab+" supprimée."); scrollTo(0,sy);
     fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action:"supprimer",cse:Q.get("cse"),cle:Q.get("cle"),n:o.n})})
-      .then(r=>r.json())
-      .then(r=>{ if(r&&r.ok){ close(); startSuivi(r.data, "Commande n°"+(o.nv||o.n)+" de "+o.prenom+" "+o.nom+" supprimée."); scrollTo(0,0); }
-                 else { err.textContent=(r&&r.error)||"La suppression n’a pas pu se faire."; err.hidden=false; yes.disabled=false; yes.textContent="Oui, supprimer"; } })
-      .catch(()=>{ err.textContent="Connexion impossible. Vérifiez votre connexion puis réessayez."; err.hidden=false; yes.disabled=false; yes.textContent="Oui, supprimer"; });
+      body:JSON.stringify({action:"supprimer",cse:Q.get("cse"),cle:Q.get("cle"),n:o.n,light:true})})
+      .then(r=>r.json()).catch(()=>({error:"Connexion impossible."}))
+      .then(r=>{ if(r&&r.ok) return; D.orders.splice(Math.min(at,D.orders.length),0,o); if(o.pst!=="na"||o.paye) qbApply(D,o,1);
+        startSuivi(D, null); const m=document.createElement("p"); m.className="warn"; m.setAttribute("role","alert"); m.textContent=lab+" n’a pas pu être supprimée ("+((r&&r.error)||"erreur")+") : elle est revenue dans la liste. Réessayez."; const k=document.querySelector("#app .kpis"); if(k) k.after(m); scrollTo(0,0); });
   };
 });
 suiviExtras(D);
@@ -873,10 +875,10 @@ function suiviExtras(D){
   const post=(op,extra)=>fetch(API,{method:"POST",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({action:"orga",op,cse:Q.get("cse"),cle:Q.get("cle")},extra||{}))}).then(r=>r.json());
   document.querySelectorAll("[data-halien]").forEach(b=>b.onclick=async()=>{ const env=b.dataset.env==="1";
     if(env&&b.dataset.c!=="1"){ b.dataset.c="1"; b.textContent="Confirmer l’envoi à "+(b.dataset.mail||"l’acheteur"); return; }
-    b.disabled=true; const t0=b.textContent; b.textContent=env?"Envoi…":"Préparation…";
+    b.disabled=true; const t0=env?"Envoyer le lien de paiement":b.textContent; b.textContent=env?"Lien envoyé à "+(b.dataset.mail||"l’acheteur")+" ✓":"Préparation…";
     const r=await post("haLien",{n:Number(b.dataset.halien),envoyer:env}).catch(()=>null);
-    if(!(r&&r.ok)){ b.disabled=false; b.dataset.c=""; b.textContent=t0; alertBox((r&&r.error)||"Connexion impossible. Réessayez."); return; }
-    if(env){ b.textContent="Lien envoyé à "+r.envoye; return; }
+    if(!(r&&r.ok)){ b.disabled=false; b.dataset.c=""; b.textContent=t0; alertBox((env?"Le lien n’a pas pu être envoyé : ":"")+((r&&r.error)||"Connexion impossible. Réessayez.")); return; }
+    if(env) return;
     b.disabled=false; b.textContent="Copier le lien";
     const ok=await (navigator.clipboard?navigator.clipboard.writeText(r.url).then(()=>true,()=>false):Promise.resolve(false));
     const s=document.createElement("span"); s.className="det"; s.style.overflowWrap="anywhere"; s.innerHTML=(ok?"Lien copié : ":"Lien : ")+esc(r.url); b.after(document.createElement("br"),s); });
@@ -952,8 +954,9 @@ function suiviExtras(D){
   const derr=dist.querySelector("#dist-err");
   const sum=()=>{ const A=D.orders.filter(o=>o.pst!=="na"||o.paye), p=A.filter(o=>o.paye), r=A.filter(o=>o.remis), x=D.orders.length-A.length; dist.querySelector("#dist-sum").textContent=`${p.length}/${A.length} payées (${eur(p.reduce((a,o)=>a+o.montant,0))}) · ${r.length}/${A.length} remises${x?` · ${x} non abouti${x>1?"es":"e"} hors liste`:""}`; }; sum();
   dist.querySelectorAll(".chk").forEach(c=>c.onchange=async()=>{ const o=D.orders.find(x=>String(x.n)===c.dataset.n); o[c.dataset.champ]=c.checked; sum(); derr.hidden=true;
+    if(o.pst==="na"&&c.dataset.champ==="paye"){ qbApply(D,o,c.checked?1:-1); const sy=scrollY; startSuivi(D, c.checked?"Commande n°"+(o.nv||o.n)+" marquée payée : elle revient dans la préparation.":null); scrollTo(0,sy); }
     const r=await post("pointer",{n:o.n,champ:c.dataset.champ,valeur:c.checked}).catch(()=>null);
-    if(!(r&&r.ok)){ c.checked=!c.checked; o[c.dataset.champ]=c.checked; sum(); derr.textContent="Connexion impossible : la case n’a pas été enregistrée."; derr.hidden=false; } });
+    if(!(r&&r.ok)){ c.checked=!c.checked; o[c.dataset.champ]=c.checked; sum(); derr.textContent="Connexion impossible : la case n’a pas été enregistrée."; derr.hidden=false; if(o.pst==="na"&&c.dataset.champ==="paye"){ qbApply(D,o,o.paye?1:-1); startSuivi(D); } } });
   dist.querySelector("#dist-csv").onclick=()=>{ const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
     const rows=[["N°","Prénom","Nom","Service","Téléphone","E-mail","Détail","Montant","Payé","Remis"]].concat(D.orders.map(o=>[o.n,o.prenom,o.nom,o.service,o.tel,o.email,o.detail,String(o.montant).replace(".",","),o.paye?"Oui":"",o.remis?"Oui":""]));
     const blob=new Blob([String.fromCharCode(65279)+rows.map(r=>r.map(q).join(";")).join("\r\n")],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="distribution-"+(Q.get("cse")||"vente")+".csv"; document.body.appendChild(a); a.click(); a.remove(); };
